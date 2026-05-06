@@ -64,8 +64,8 @@ class MQTTClient:
             "homeassistant/device_automation/espmuter/button/config",
             json.dumps({
                 "automation_type": "trigger",
-                "type": "action",
-                "subtype": "button_1_press",
+                "type": "button_short_press",
+                "subtype": "button_1",
                 "topic": "espmuter/button",
                 "payload": "pressed",
                 "device": {"identifiers": ["espmuter"], "name": "ESPMuter"},
