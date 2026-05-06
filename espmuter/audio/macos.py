@@ -22,6 +22,27 @@ class _AudioObjectPropertyAddress(ctypes.Structure):
     ]
 
 
+_ca.AudioObjectGetPropertyData.restype = ctypes.c_int32
+_ca.AudioObjectGetPropertyData.argtypes = [
+    ctypes.c_uint32,                                  # inObjectID
+    ctypes.POINTER(_AudioObjectPropertyAddress),      # inAddress
+    ctypes.c_uint32,                                  # inQualifierDataSize
+    ctypes.c_void_p,                                  # inQualifierData
+    ctypes.POINTER(ctypes.c_uint32),                  # ioDataSize
+    ctypes.c_void_p,                                  # outData
+]
+
+_ca.AudioObjectSetPropertyData.restype = ctypes.c_int32
+_ca.AudioObjectSetPropertyData.argtypes = [
+    ctypes.c_uint32,                                  # inObjectID
+    ctypes.POINTER(_AudioObjectPropertyAddress),      # inAddress
+    ctypes.c_uint32,                                  # inQualifierDataSize
+    ctypes.c_void_p,                                  # inQualifierData
+    ctypes.c_uint32,                                  # inDataSize
+    ctypes.c_void_p,                                  # inData
+]
+
+
 def _get_default_input_device() -> int:
     prop = _AudioObjectPropertyAddress(
         _kAudioHardwarePropertyDefaultInputDevice,
@@ -30,10 +51,12 @@ def _get_default_input_device() -> int:
     )
     device_id = ctypes.c_uint32(0)
     size = ctypes.c_uint32(ctypes.sizeof(device_id))
-    _ca.AudioObjectGetPropertyData(
+    status = _ca.AudioObjectGetPropertyData(
         _kAudioObjectSystemObject, ctypes.byref(prop),
         0, None, ctypes.byref(size), ctypes.byref(device_id),
     )
+    if status != 0:
+        raise OSError(f"CoreAudio: AudioObjectGetPropertyData returned {status}")
     return device_id.value
 
 
