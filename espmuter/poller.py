@@ -9,16 +9,24 @@ class Poller:
         self._backend = backend
         self._on_change = on_change
         self._last_state: Optional[bool] = None
+        self._lock = threading.Lock()
         self._stop = threading.Event()
 
     def tick(self) -> None:
-        current = self._backend.get_mute()
-        if current != self._last_state:
-            self._last_state = current
-            self._on_change(current)
+        changed = False
+        value: Optional[bool] = None
+        with self._lock:
+            current = self._backend.get_mute()
+            if current != self._last_state:
+                self._last_state = current
+                changed = True
+                value = current
+        if changed:
+            self._on_change(value)
 
     def toggle(self) -> None:
-        self._backend.set_mute(not self._backend.get_mute())
+        with self._lock:
+            self._backend.set_mute(not self._backend.get_mute())
 
     def start(self, interval: float = 0.2) -> threading.Thread:
         self._stop.clear()
