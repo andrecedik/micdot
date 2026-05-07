@@ -13,6 +13,17 @@ A macOS menu bar app that mutes and unmutes your microphone — via hotkey, tray
 - Launches at login via macOS LaunchAgent
 - macOS 12+ · Python 3.11+
 
+## Download & Install (no Python required)
+
+Pre-built binaries are available on the [Releases page](https://github.com/andrecedik/micdot/releases).
+
+1. Download `MicDot-<version>-arm64.app.zip` (Apple Silicon) or `MicDot-<version>-x86_64.app.zip` (Intel).
+2. Unzip and move `MicDot.app` to `/Applications`.
+3. **First launch:** right-click `MicDot.app` → **Open** → click **Open** in the dialog. This is a one-time step to bypass Gatekeeper for unsigned apps.
+4. MicDot will appear in your menu bar.
+
+> **Note:** If you move the app after enabling "Launch at Login", re-enable it in Settings so the LaunchAgent path updates.
+
 ## Software Setup
 
 ### Requirements
