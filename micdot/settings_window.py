@@ -97,18 +97,24 @@ mh.addEventListener('input',function(){if(/^#[0-9a-fA-F]{6}$/.test(mh.value))mp.
 up.addEventListener('input',function(){uh.value=up.value});
 uh.addEventListener('input',function(){if(/^#[0-9a-fA-F]{6}$/.test(uh.value))up.value=uh.value});
 document.getElementById('btn').addEventListener('click',function(){
+  var portVal=parseInt(document.getElementById('mqtt_port').value);
+  var brightVal=parseInt(document.getElementById('led_brightness').value);
+  if(isNaN(portVal)||portVal<1||portVal>65535){alert('Port must be 1–65535');return;}
+  if(isNaN(brightVal)||brightVal<0||brightVal>255){alert('Brightness must be 0–255');return;}
+  var mhv=/^#[0-9a-fA-F]{6}$/.test(mh.value)?mh.value:toHex(c.color_muted);
+  var uhv=/^#[0-9a-fA-F]{6}$/.test(uh.value)?uh.value:toHex(c.color_unmuted);
   document.getElementById('btn').disabled=true;
   window.pywebview.api.save({
     mqtt_host:document.getElementById('mqtt_host').value,
-    mqtt_port:parseInt(document.getElementById('mqtt_port').value),
+    mqtt_port:portVal,
     mqtt_username:document.getElementById('mqtt_username').value,
     mqtt_password:document.getElementById('mqtt_password').value,
     hotkey:document.getElementById('hotkey').value,
-    led_brightness:parseInt(document.getElementById('led_brightness').value),
-    color_muted:hexToRgb(mh.value),
-    color_unmuted:hexToRgb(uh.value),
+    led_brightness:brightVal,
+    color_muted:hexToRgb(mhv),
+    color_unmuted:hexToRgb(uhv),
     autostart:document.getElementById('autostart').checked
-  });
+  }).catch(function(){document.getElementById('btn').disabled=false;});
 });
 </script>
 </body>
