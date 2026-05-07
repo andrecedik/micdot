@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "espmuter"
+name = "micdot"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
@@ -14,10 +14,10 @@ dependencies = [
 ]
 
 [project.scripts]
-espmuter = "espmuter.main:main"
+micdot = "micdot.main:main"
 
 [tool.setuptools.packages.find]
-include = ["espmuter*"]
+include = ["micdot*"]
 
 [project.optional-dependencies]
 dev = [

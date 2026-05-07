@@ -1,6 +1,6 @@
 from __future__ import annotations
 import ctypes
-from espmuter.audio.backend import AudioBackend
+from micdot.audio.backend import AudioBackend
 
 _ca = ctypes.cdll.LoadLibrary(
     "/System/Library/Frameworks/CoreAudio.framework/CoreAudio"

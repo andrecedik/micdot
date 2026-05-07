@@ -1,11 +1,11 @@
-"""Run as: python -m espmuter.settings_window [config_path]"""
+"""Run as: python -m micdot.settings_window [config_path]"""
 from __future__ import annotations
 import shutil
 import sys
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
-from espmuter.config import Config, DEFAULT_CONFIG_PATH
+from micdot.config import Config, DEFAULT_CONFIG_PATH
 
 
 def _hex(color: dict) -> str:
@@ -20,7 +20,7 @@ def _from_hex(h: str) -> dict:
 def run(config_path: Path) -> None:
     config = Config.load(config_path)
     root = tk.Tk()
-    root.title("ESPMuter Settings")
+    root.title("MicDot Settings")
     root.resizable(False, False)
 
     f = ttk.Frame(root, padding=16)
@@ -53,7 +53,7 @@ def run(config_path: Path) -> None:
     ttk.Checkbutton(f, variable=autostart).grid(row=8, column=1, sticky="w", padx=(8, 0))
 
     def save() -> None:
-        from espmuter.autostart import enable_autostart, disable_autostart
+        from micdot.autostart import enable_autostart, disable_autostart
         new = Config(
             mqtt_host=mqtt_host.get(),
             mqtt_port=mqtt_port.get(),
@@ -68,7 +68,7 @@ def run(config_path: Path) -> None:
         new.save(config_path)
         if new.autostart:
             python = shutil.which("python3") or sys.executable
-            enable_autostart(f"{python} -m espmuter.main")
+            enable_autostart(f"{python} -m micdot.main")
         else:
             disable_autostart()
         root.destroy()

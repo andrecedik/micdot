@@ -1,5 +1,5 @@
-from espmuter.audio.backend import StubAudioBackend
-from espmuter.poller import Poller
+from micdot.audio.backend import StubAudioBackend
+from micdot.poller import Poller
 
 
 def test_first_tick_publishes_initial_state():

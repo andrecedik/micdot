@@ -3,12 +3,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-from espmuter.audio.backend import get_backend
-from espmuter.config import Config, DEFAULT_CONFIG_PATH
-from espmuter.hotkey import HotkeyListener
-from espmuter.mqtt_client import MQTTClient
-from espmuter.poller import Poller
-from espmuter.tray import TrayIcon
+from micdot.audio.backend import get_backend
+from micdot.config import Config, DEFAULT_CONFIG_PATH
+from micdot.hotkey import HotkeyListener
+from micdot.mqtt_client import MQTTClient
+from micdot.poller import Poller
+from micdot.tray import TrayIcon
 
 
 def main() -> None:
@@ -33,7 +33,7 @@ def main() -> None:
     tray = TrayIcon(
         on_toggle=on_toggle,
         on_settings=lambda: subprocess.Popen(
-            [sys.executable, "-m", "espmuter.settings_window", str(DEFAULT_CONFIG_PATH)]
+            [sys.executable, "-m", "micdot.settings_window", str(DEFAULT_CONFIG_PATH)]
         ),
         on_quit=on_quit,
     )

@@ -1,4 +1,4 @@
-from espmuter.hotkey import to_pynput_format, HotkeyListener
+from micdot.hotkey import to_pynput_format, HotkeyListener
 
 
 def test_modifiers_wrapped_in_angle_brackets():
@@ -18,7 +18,7 @@ def test_plain_key_unchanged():
 
 
 def test_listener_registers_correct_hotkey(mocker):
-    mock_cls = mocker.patch("espmuter.hotkey.keyboard.GlobalHotKeys")
+    mock_cls = mocker.patch("micdot.hotkey.keyboard.GlobalHotKeys")
     callback = mocker.Mock()
     listener = HotkeyListener("ctrl+shift+m", callback)
     listener.start()
@@ -27,7 +27,7 @@ def test_listener_registers_correct_hotkey(mocker):
 
 
 def test_listener_stop_delegates(mocker):
-    mock_cls = mocker.patch("espmuter.hotkey.keyboard.GlobalHotKeys")
+    mock_cls = mocker.patch("micdot.hotkey.keyboard.GlobalHotKeys")
     listener = HotkeyListener("ctrl+m", mocker.Mock())
     listener.start()
     listener.stop()
@@ -35,6 +35,6 @@ def test_listener_stop_delegates(mocker):
 
 
 def test_listener_stop_before_start_is_noop(mocker):
-    mocker.patch("espmuter.hotkey.keyboard.GlobalHotKeys")
+    mocker.patch("micdot.hotkey.keyboard.GlobalHotKeys")
     listener = HotkeyListener("ctrl+m", mocker.Mock())
     listener.stop()  # must not raise

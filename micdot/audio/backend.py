@@ -25,7 +25,7 @@ class StubAudioBackend(AudioBackend):
 def get_backend() -> AudioBackend:
     match sys.platform:
         case "darwin":
-            from espmuter.audio.macos import MacOSAudioBackend
+            from micdot.audio.macos import MacOSAudioBackend
             return MacOSAudioBackend()
         case _:
             raise NotImplementedError(f"No AudioBackend for platform: {sys.platform}")

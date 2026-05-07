@@ -1,7 +1,7 @@
 from __future__ import annotations
 import threading
 from typing import Callable, Optional
-from espmuter.audio.backend import AudioBackend
+from micdot.audio.backend import AudioBackend
 
 
 class Poller:

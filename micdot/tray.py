@@ -33,7 +33,7 @@ class TrayIcon:
         self._on_settings = on_settings
         self._on_quit = on_quit
         self._icon = pystray.Icon(
-            "espmuter",
+            "micdot",
             _make_icon((128, 128, 128)),
             menu=pystray.Menu(
                 pystray.MenuItem("Toggle Mute", self._toggle, default=True),

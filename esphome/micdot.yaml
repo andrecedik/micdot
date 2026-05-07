@@ -11,7 +11,7 @@ substitutions:
   button_pin: GPIO14
 
 esphome:
-  name: espmuter
+  name: micdot
 
 esp32:
   board: ${board_name}
@@ -22,8 +22,8 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
-    ssid: "ESPMuter Fallback"
-    password: "espmuter123"
+    ssid: "MicDot Fallback"
+    password: "micdot123"
 
 captive_portal:
 
@@ -38,7 +38,7 @@ mqtt:
   username: !secret mqtt_username
   password: !secret mqtt_password
   on_message:
-    - topic: espmuter/led/set
+    - topic: micdot/led/set
       then:
         - lambda: |-
             StaticJsonDocument<128> doc;
@@ -59,7 +59,7 @@ light:
     variant: WS2812X
     pin: ${led_pin}
     num_leds: 12
-    name: "ESPMuter Ring"
+    name: "MicDot Ring"
     id: led_ring
     default_transition_length: 100ms
 
@@ -69,10 +69,10 @@ binary_sensor:
       number: ${button_pin}
       mode: INPUT_PULLUP
       inverted: true
-    name: "ESPMuter Button"
+    name: "MicDot Button"
     filters:
       - delayed_on: 20ms
     on_press:
       - mqtt.publish:
-          topic: espmuter/button
+          topic: micdot/button
           payload: "pressed"

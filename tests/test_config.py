@@ -1,7 +1,7 @@
 import json
 import pytest
 from pathlib import Path
-from espmuter.config import Config
+from micdot.config import Config
 
 
 def test_config_defaults():

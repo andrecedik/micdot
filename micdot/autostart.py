@@ -3,12 +3,12 @@ import plistlib
 import subprocess
 from pathlib import Path
 
-PLIST_PATH = Path.home() / "Library" / "LaunchAgents" / "com.espmuter.agent.plist"
+PLIST_PATH = Path.home() / "Library" / "LaunchAgents" / "com.micdot.agent.plist"
 
 
 def enable_autostart(command: str) -> None:
     plist = {
-        "Label": "com.espmuter.agent",
+        "Label": "com.micdot.agent",
         "ProgramArguments": command.split(),
         "RunAtLoad": True,
         "KeepAlive": True,

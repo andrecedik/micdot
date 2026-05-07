@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
-DEFAULT_CONFIG_PATH = Path.home() / ".config" / "espmuter" / "config.json"
+DEFAULT_CONFIG_PATH = Path.home() / ".config" / "micdot" / "config.json"
 
 
 @dataclass

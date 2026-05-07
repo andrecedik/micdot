@@ -1,4 +1,4 @@
-from espmuter.audio.backend import AudioBackend, StubAudioBackend
+from micdot.audio.backend import AudioBackend, StubAudioBackend
 
 
 def test_stub_default_mute_is_false():
