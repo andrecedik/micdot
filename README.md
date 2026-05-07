@@ -17,9 +17,11 @@ A macOS menu bar app that mutes and unmutes your microphone — via hotkey, tray
 
 Pre-built binaries are available on the [Releases page](https://github.com/andrecedik/micdot/releases).
 
-1. Download `MicDot-<version>-arm64.app.zip` (Apple Silicon) or `MicDot-<version>-x86_64.app.zip` (Intel).
+1. Download `MicDot-<version>-arm64.app.zip`.
 2. Unzip and move `MicDot.app` to `/Applications`.
 3. **First launch:** right-click `MicDot.app` → **Open** → click **Open** in the dialog. This is a one-time step to bypass Gatekeeper for unsigned apps.
+
+> **Intel Mac users:** only an Apple Silicon (arm64) build is published. It runs via Rosetta 2, which macOS installs automatically on first use — no extra steps needed.
 4. MicDot will appear in your menu bar.
 
 > **Note:** If you move the app after enabling "Launch at Login", re-enable it in Settings so the LaunchAgent path updates.

@@ -8,18 +8,13 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
-    name: Build (${{ matrix.arch }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-14
-            arch: arm64
-          - os: macos-13
-            arch: x86_64
-    runs-on: ${{ matrix.os }}
+    name: Build (arm64)
+    runs-on: macos-14
 
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +34,7 @@ jobs:
       - name: Create zip
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          ZIPNAME="MicDot-${VERSION}-${{ matrix.arch }}.app.zip"
+          ZIPNAME="MicDot-${VERSION}-arm64.app.zip"
           cd dist
           zip -r "../${ZIPNAME}" MicDot.app
           echo "ZIPNAME=${ZIPNAME}" >> "$GITHUB_ENV"
