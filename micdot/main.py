@@ -47,7 +47,20 @@ def _reload_config(
     state.config = new_config
 
 
+def _settings_cmd(config_path: Path) -> list[str]:
+    if getattr(sys, "frozen", False):
+        return [sys.executable, "--settings", str(config_path)]
+    return [sys.executable, "-m", "micdot.settings_window", str(config_path)]
+
+
 def main() -> None:
+    if getattr(sys, "frozen", False) and "--settings" in sys.argv:
+        idx = sys.argv.index("--settings")
+        path = Path(sys.argv[idx + 1]) if idx + 1 < len(sys.argv) else DEFAULT_CONFIG_PATH
+        from micdot.settings_window import run as run_settings
+        run_settings(path)
+        return
+
     config = Config.load(DEFAULT_CONFIG_PATH)
     backend = get_backend()
 
@@ -70,7 +83,7 @@ def main() -> None:
         if settings_proc[0] is not None and settings_proc[0].poll() is None:
             return
         settings_proc[0] = subprocess.Popen(
-            [sys.executable, "-m", "micdot.settings_window", str(DEFAULT_CONFIG_PATH)]
+            _settings_cmd(DEFAULT_CONFIG_PATH)
         )
 
         def _on_exit() -> None:
