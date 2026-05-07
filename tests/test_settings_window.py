@@ -1,3 +1,4 @@
+import sys
 import pytest
 from unittest.mock import MagicMock
 from micdot.config import Config
@@ -62,3 +63,27 @@ def test_save_destroys_window(api, mocker):
     api.set_window(window)
     api.save(_DATA)
     window.destroy.assert_called_once()
+
+
+def test_save_enables_autostart_with_executable_when_frozen(api, mocker):
+    mocker.patch.object(sys, "frozen", True, create=True)
+    fake_exe = "/Applications/MicDot.app/Contents/MacOS/MicDot"
+    mocker.patch.object(sys, "executable", fake_exe)
+    enable = mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+
+    api.save({**_DATA, "autostart": True})
+
+    enable.assert_called_once_with(fake_exe)
+
+
+def test_save_enables_autostart_with_python_command_when_not_frozen(api, mocker):
+    mocker.patch.object(sys, "frozen", False, create=True)
+    mocker.patch("micdot.settings_window.shutil.which", return_value="/usr/bin/python3")
+    enable = mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+
+    api.save({**_DATA, "autostart": True})
+
+    args = enable.call_args[0][0]
+    assert "-m" in args and "micdot.main" in args

@@ -156,8 +156,11 @@ class Api:
         )
         new.save(self._config_path)
         if new.autostart:
-            python = shutil.which("python3") or sys.executable
-            enable_autostart(f"{python} -m micdot.main")
+            if getattr(sys, "frozen", False):
+                enable_autostart(sys.executable)
+            else:
+                python = shutil.which("python3") or sys.executable
+                enable_autostart(f"{python} -m micdot.main")
         else:
             disable_autostart()
         self._saved = True
