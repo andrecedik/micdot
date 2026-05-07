@@ -32,13 +32,19 @@ def _reload_config(
     config_path: Path,
     on_toggle: Callable[[], None],
 ) -> None:
-    state.config = Config.load(config_path)
+    new_config = Config.load(config_path)
+    try:
+        new_mqtt = MQTTClient(new_config, on_button_press=on_toggle)
+        new_hotkey = HotkeyListener(new_config.hotkey, callback=on_toggle)
+    except Exception:
+        return  # keep existing components running if construction fails
     state.mqtt.stop()
-    state.mqtt = MQTTClient(state.config, on_button_press=on_toggle)
+    state.mqtt = new_mqtt
     state.mqtt.start()
     state.hotkey_listener.stop()
-    state.hotkey_listener = HotkeyListener(state.config.hotkey, callback=on_toggle)
+    state.hotkey_listener = new_hotkey
     state.hotkey_listener.start()
+    state.config = new_config
 
 
 def main() -> None:
@@ -58,16 +64,20 @@ def main() -> None:
         state.mqtt.stop()
         sys.exit(0)
 
+    settings_proc: list[subprocess.Popen | None] = [None]
+
     def open_settings() -> None:
-        proc = subprocess.Popen(
+        if settings_proc[0] is not None and settings_proc[0].poll() is None:
+            return
+        settings_proc[0] = subprocess.Popen(
             [sys.executable, "-m", "micdot.settings_window", str(DEFAULT_CONFIG_PATH)]
         )
-        threading.Thread(
-            target=lambda: proc.wait() == 0 and _reload_config(
-                state, DEFAULT_CONFIG_PATH, on_toggle
-            ),
-            daemon=True,
-        ).start()
+
+        def _on_exit() -> None:
+            if settings_proc[0] is not None and settings_proc[0].wait() == 0:
+                _reload_config(state, DEFAULT_CONFIG_PATH, on_toggle)
+
+        threading.Thread(target=_on_exit, daemon=True).start()
 
     state = _State(
         config,
