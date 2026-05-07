@@ -121,7 +121,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-All 43 tests run without hardware or an MQTT broker.
+All tests run without hardware or an MQTT broker.
 
 ### Project layout
 

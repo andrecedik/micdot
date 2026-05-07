@@ -34,11 +34,11 @@ jobs:
 
       - name: Build app
         run: |
-          pyinstaller MicDot.spec --noconfirm
+          MICDOT_VERSION="${GITHUB_REF_NAME#v}" pyinstaller MicDot.spec --noconfirm
 
       - name: Create zip
         run: |
-          VERSION="${GITHUB_REF_NAME}"
+          VERSION="${GITHUB_REF_NAME#v}"
           ZIPNAME="MicDot-${VERSION}-${{ matrix.arch }}.app.zip"
           cd dist
           zip -r "../${ZIPNAME}" MicDot.app

@@ -1,5 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 from PyInstaller.utils.hooks import collect_all
+
+_version = os.environ.get("MICDOT_VERSION", "0.1.0")
 
 webview_datas, webview_binaries, webview_hiddenimports = collect_all("webview")
 
@@ -54,8 +57,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "MicDot",
         "CFBundleDisplayName": "MicDot",
-        "CFBundleVersion": "0.1.0",
-        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleVersion": _version,
+        "CFBundleShortVersionString": _version,
         "LSUIElement": True,
         "NSAccessibilityUsageDescription": (
             "MicDot listens for the global mute hotkey."
