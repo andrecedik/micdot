@@ -32,3 +32,9 @@ def test_listener_stop_delegates(mocker):
     listener.start()
     listener.stop()
     mock_cls.return_value.stop.assert_called_once()
+
+
+def test_listener_stop_before_start_is_noop(mocker):
+    mocker.patch("espmuter.hotkey.keyboard.GlobalHotKeys")
+    listener = HotkeyListener("ctrl+m", mocker.Mock())
+    listener.stop()  # must not raise

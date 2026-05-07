@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Callable
 from pynput import keyboard
 
-_MODIFIERS = {"ctrl", "shift", "alt", "cmd", "super"}
+_MODIFIERS = {"ctrl", "shift", "alt", "cmd"}
 
 
 def to_pynput_format(hotkey: str) -> str:
