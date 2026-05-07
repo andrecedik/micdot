@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock
 from micdot.config import Config
 from micdot.settings_window import Api
 
@@ -52,3 +53,12 @@ def test_save_disables_autostart_when_false(api, mocker):
     disable = mocker.patch("micdot.settings_window.disable_autostart")
     api.save({**_DATA, "autostart": False})
     disable.assert_called_once()
+
+
+def test_save_destroys_window(api, mocker):
+    mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+    window = MagicMock()
+    api.set_window(window)
+    api.save(_DATA)
+    window.destroy.assert_called_once()

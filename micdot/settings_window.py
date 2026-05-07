@@ -1,9 +1,7 @@
 """Run as: python -m micdot.settings_window [config_path]"""
 from __future__ import annotations
-import json
 import shutil
 import sys
-from dataclasses import asdict
 from pathlib import Path
 
 from micdot.autostart import enable_autostart, disable_autostart
