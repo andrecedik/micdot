@@ -1,0 +1,78 @@
+# Board substitutions — change these three lines to switch boards.
+#
+#   Board                 board_name                    led_pin   button_pin
+#   ESP32 DevKit V1       esp32dev                      GPIO5     GPIO14
+#   ESP32-S3 DevKit       esp32-s3-devkitc-1            GPIO5     GPIO4
+#   XIAO ESP32C3          seeed_xiao_esp32c3            GPIO2     GPIO3
+#   ESP32-C3 SuperMini    esp32-c3-devkitm-1            GPIO8     GPIO9
+substitutions:
+  board_name: esp32dev
+  led_pin: GPIO5
+  button_pin: GPIO14
+
+esphome:
+  name: espmuter
+
+esp32:
+  board: ${board_name}
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "ESPMuter Fallback"
+    password: "espmuter123"
+
+captive_portal:
+
+logger:
+
+ota:
+  platform: esphome
+
+mqtt:
+  broker: !secret mqtt_host
+  port: !secret mqtt_port
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  on_message:
+    - topic: espmuter/led/set
+      then:
+        - lambda: |-
+            StaticJsonDocument<128> doc;
+            deserializeJson(doc, x.c_str());
+            auto call = id(led_ring).make_call();
+            call.set_state(true);
+            call.set_rgb(
+              doc["r"].as<int>() / 255.0f,
+              doc["g"].as<int>() / 255.0f,
+              doc["b"].as<int>() / 255.0f
+            );
+            call.set_brightness(doc["brightness"].as<int>() / 255.0f);
+            call.perform();
+
+light:
+  - platform: neopixelbus
+    type: GRB
+    variant: WS2812X
+    pin: ${led_pin}
+    num_leds: 12
+    name: "ESPMuter Ring"
+    id: led_ring
+    default_transition_length: 100ms
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: ${button_pin}
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "ESPMuter Button"
+    filters:
+      - delayed_on: 20ms
+    on_press:
+      - mqtt.publish:
+          topic: espmuter/button
+          payload: "pressed"
