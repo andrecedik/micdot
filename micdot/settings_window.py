@@ -177,7 +177,17 @@ class Api:
             disable_autostart()
         log.info("Autostart configured (enabled=%s)", config.autostart)
         if self._window is not None:
+            log.debug("Calling window.destroy()")
             self._window.destroy()
+            log.debug("window.destroy() returned")
+        # destroy() dispatches asynchronously to the main thread's run loop and
+        # can silently fail in a PyInstaller bundle. Force-exit the settings
+        # subprocess directly — main.py watches the exit code to decide whether
+        # to reload config.
+        import logging as _logging
+        import os as _os
+        _logging.shutdown()
+        _os._exit(0 if self._saved else 1)
 
 
 def run(config_path: Path) -> None:
