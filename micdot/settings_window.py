@@ -138,6 +138,19 @@ class Api:
     def set_window(self, window) -> None:
         self._window = window
 
+    def _close_window(self) -> None:
+        # window.destroy() must run on the main thread. Dispatching via
+        # NSOperationQueue is the correct PyObjC pattern — the main thread is
+        # already running the NSApp event loop inside webview.start(), so the
+        # queued block is picked up immediately.
+        try:
+            from Foundation import NSOperationQueue
+            NSOperationQueue.mainQueue().addOperationWithBlock_(self._window.destroy)
+            log.debug("Window close dispatched to main thread via NSOperationQueue")
+        except Exception:
+            log.exception("NSOperationQueue dispatch failed; calling destroy() directly")
+            self._window.destroy()
+
     def save(self, data: dict) -> None:
         log.info("Saving settings")
         new = Config(
@@ -177,17 +190,7 @@ class Api:
             disable_autostart()
         log.info("Autostart configured (enabled=%s)", config.autostart)
         if self._window is not None:
-            log.debug("Calling window.destroy()")
-            self._window.destroy()
-            log.debug("window.destroy() returned")
-        # destroy() dispatches asynchronously to the main thread's run loop and
-        # can silently fail in a PyInstaller bundle. Force-exit the settings
-        # subprocess directly — main.py watches the exit code to decide whether
-        # to reload config.
-        import logging as _logging
-        import os as _os
-        _logging.shutdown()
-        _os._exit(0 if self._saved else 1)
+            self._close_window()
 
 
 def run(config_path: Path) -> None:
