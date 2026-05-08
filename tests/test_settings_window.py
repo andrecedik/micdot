@@ -65,9 +65,8 @@ def test_save_destroys_window(api, mocker):
     window = MagicMock()
     api.set_window(window)
     api.save(_DATA)
-    time.sleep(0.05)  # wait for _post_save daemon thread
     window.native.performSelectorOnMainThread_withObject_waitUntilDone_.assert_called_once_with(
-        b"close", None, False
+        b"close", None, True
     )
 
 

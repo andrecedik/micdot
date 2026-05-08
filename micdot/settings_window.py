@@ -138,23 +138,6 @@ class Api:
     def set_window(self, window) -> None:
         self._window = window
 
-    def _close_window(self) -> None:
-        # Dispatch NSWindow.close directly to the main thread using
-        # performSelectorOnMainThread. This is a pure ObjC selector dispatch —
-        # no Python callable wrapping, so there are no Python GC or GIL issues
-        # that plagued the AppHelper.callAfter / NSOperationQueue approaches.
-        native = getattr(self._window, "native", None)
-        if native is not None:
-            try:
-                native.performSelectorOnMainThread_withObject_waitUntilDone_(
-                    b"close", None, False
-                )
-                log.debug("Window close dispatched via performSelectorOnMainThread")
-                return
-            except Exception:
-                log.exception("performSelectorOnMainThread dispatch failed; falling back")
-        self._window.destroy()
-
     def save(self, data: dict) -> None:
         log.info("Saving settings")
         new = Config(
@@ -179,11 +162,35 @@ class Api:
         new.save(self._config_path)
         log.info("Config saved to %s", self._config_path)
         self._saved = True
-        # Return to JS immediately — launchctl calls in _post_save can be
-        # slow and block the pywebview callback thread, freezing the window.
-        threading.Thread(target=self._post_save, args=(new,), daemon=True).start()
+        # Autostart configuration can be slow (launchctl); run it in the background.
+        threading.Thread(target=self._handle_autostart, args=(new,), daemon=True).start()
+        # Close the window synchronously (waitUntilDone=True) from the main thread
+        # before returning to the caller. pywebview's js_bridge_call thread calls
+        # evaluate_js immediately after save() returns to resolve the JS Promise.
+        # evaluate_js blocks on a semaphore waiting for a WKWebView completion
+        # handler. If we close the window asynchronously (waitUntilDone=False) from
+        # a separate thread, the close races with that completion handler: when close
+        # wins, windowWillClose_ sets i.webview=None and calls app.stop_(), orphaning
+        # the pending eval — the handler never fires and the thread deadlocks.
+        # With waitUntilDone=True here, windowWillClose_ has already run and removed
+        # the window from BrowserView.instances by the time save() returns, so
+        # evaluate_js finds no instance and returns None immediately — no deadlock.
+        if self._window is None:
+            return
+        native = getattr(self._window, "native", None)
+        if native is not None:
+            try:
+                native.performSelectorOnMainThread_withObject_waitUntilDone_(
+                    b"close", None, True
+                )
+                log.debug("Window closed via performSelectorOnMainThread (sync)")
+            except Exception:
+                log.exception("Sync window close failed; falling back to destroy()")
+                self._window.destroy()
+        else:
+            self._window.destroy()
 
-    def _post_save(self, config: Config) -> None:
+    def _handle_autostart(self, config: Config) -> None:
         if config.autostart:
             if getattr(sys, "frozen", False):
                 enable_autostart(sys.executable)
@@ -193,8 +200,6 @@ class Api:
         else:
             disable_autostart()
         log.info("Autostart configured (enabled=%s)", config.autostart)
-        if self._window is not None:
-            self._close_window()
 
 
 def run(config_path: Path) -> None:
