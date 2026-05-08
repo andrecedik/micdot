@@ -15,17 +15,27 @@ class MQTTClient:
         if config.mqtt_username:
             self._client.username_pw_set(config.mqtt_username, config.mqtt_password)
 
+    @property
+    def _configured(self) -> bool:
+        return bool(self._config.mqtt_host)
+
     def start(self) -> None:
+        if not self._configured:
+            return
         self._client.connect_async(
             self._config.mqtt_host, self._config.mqtt_port, keepalive=60
         )
         self._client.loop_start()
 
     def stop(self) -> None:
+        if not self._configured:
+            return
         self._client.loop_stop()
         self._client.disconnect()
 
     def publish_state(self, muted: bool) -> None:
+        if not self._configured:
+            return
         self._client.publish(
             "micdot/state", "muted" if muted else "unmuted", retain=True
         )

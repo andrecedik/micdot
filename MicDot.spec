@@ -52,7 +52,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name="MicDot.app",
-    icon=None,
+    icon="resources/MicDot.icns",
     bundle_identifier="com.micdot.app",
     info_plist={
         "CFBundleName": "MicDot",
