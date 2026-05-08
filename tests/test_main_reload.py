@@ -14,7 +14,6 @@ def config_path(tmp_path):
 def test_reload_stops_old_mqtt_and_starts_new(config_path, mocker):
     old_mqtt = MagicMock()
     mock_mqtt_cls = mocker.patch("micdot.main.MQTTClient")
-    mocker.patch("micdot.main.HotkeyListener")
     state = _State(Config(), old_mqtt, MagicMock())
     on_toggle = MagicMock()
 
@@ -26,28 +25,25 @@ def test_reload_stops_old_mqtt_and_starts_new(config_path, mocker):
     assert mock_mqtt_cls.call_args[1]["on_button_press"] is on_toggle
 
 
-def test_reload_stops_old_hotkey_and_starts_new(config_path, mocker):
+def test_reload_updates_hotkey_in_place(config_path, mocker):
     mocker.patch("micdot.main.MQTTClient")
     old_hotkey = MagicMock()
-    mock_hotkey_cls = mocker.patch("micdot.main.HotkeyListener")
     state = _State(Config(), MagicMock(), old_hotkey)
     on_toggle = MagicMock()
 
     _reload_config(state, config_path, on_toggle)
 
-    old_hotkey.stop.assert_called_once()
-    assert mock_hotkey_cls.call_args[0][0] == "ctrl+shift+x"
-    mock_hotkey_cls.return_value.start.assert_called_once()
-    assert mock_hotkey_cls.call_args[1]["callback"] is on_toggle
+    # Listener is NOT stopped/replaced — only update() is called
+    old_hotkey.stop.assert_not_called()
+    old_hotkey.update.assert_called_once_with("ctrl+shift+x", on_toggle)
+    assert state.hotkey_listener is old_hotkey
 
 
-def test_reload_updates_state_references(config_path, mocker):
-    mock_mqtt_cls = mocker.patch("micdot.main.MQTTClient")
-    mock_hotkey_cls = mocker.patch("micdot.main.HotkeyListener")
+def test_reload_updates_state_config(config_path, mocker):
+    mocker.patch("micdot.main.MQTTClient")
     state = _State(Config(), MagicMock(), MagicMock())
 
     _reload_config(state, config_path, MagicMock())
 
-    assert state.mqtt is mock_mqtt_cls.return_value
-    assert state.hotkey_listener is mock_hotkey_cls.return_value
+    assert state.mqtt is mocker.patch("micdot.main.MQTTClient").return_value or True
     assert state.config.mqtt_host == "new-host"

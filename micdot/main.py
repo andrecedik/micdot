@@ -39,35 +39,35 @@ def _reload_config(
     new_config = Config.load(config_path)
     try:
         new_mqtt = MQTTClient(new_config, on_button_press=on_toggle)
-        new_hotkey = HotkeyListener(new_config.hotkey, callback=on_toggle)
     except Exception:
-        log.exception("Failed to construct components during reload — keeping existing config")
+        log.exception("Failed to construct MQTT client during reload — keeping existing config")
         return
     state.mqtt.stop()
     state.mqtt = new_mqtt
     state.mqtt.start()
 
-    # keyboard.GlobalHotKeys.__init__ calls TSMCurrentKeyboardInputSourceRefCreate
-    # which asserts main-queue on macOS 15 (Sequoia). Dispatch the hotkey lifecycle
-    # to the main thread so the TSM call happens there.
-    def _restart_hotkey() -> None:
+    # HotKey construction calls TISCopyCurrentKeyboardInputSource which asserts
+    # dispatch_assert_queue(main_queue) on macOS 15+. Dispatch to main thread.
+    # The Listener thread is NOT restarted — only the HotKey matching object is
+    # swapped — so Listener._run()/keycode_context() never runs again after NSApp.
+    def _update_hotkey() -> None:
         try:
-            log.debug("Stopping old hotkey listener (main thread)")
-            state.hotkey_listener.stop()
-            log.debug("Starting new hotkey listener (main thread)")
-            state.hotkey_listener = new_hotkey
-            state.hotkey_listener.start()
+            log.debug("Updating hotkey to %r (main thread)", new_config.hotkey)
+            state.hotkey_listener.update(new_config.hotkey, on_toggle)
             state.config = new_config
             log.info("Config reloaded")
         except Exception:
-            log.exception("Error restarting hotkey listener on main thread")
+            log.exception("Error updating hotkey on main thread")
 
-    try:
-        from Foundation import NSOperationQueue
-        NSOperationQueue.mainQueue().addOperationWithBlock_(_restart_hotkey)
-    except Exception:
-        log.exception("Could not dispatch to main thread; restarting hotkey inline")
-        _restart_hotkey()
+    if threading.current_thread() is threading.main_thread():
+        _update_hotkey()
+    else:
+        try:
+            from Foundation import NSOperationQueue
+            NSOperationQueue.mainQueue().addOperationWithBlock_(_update_hotkey)
+        except Exception:
+            log.exception("Could not dispatch to main thread; updating hotkey inline")
+            _update_hotkey()
 
 
 def _settings_cmd(config_path: Path) -> list[str]:
