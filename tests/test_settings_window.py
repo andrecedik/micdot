@@ -1,4 +1,5 @@
 import sys
+import time
 import pytest
 from unittest.mock import MagicMock
 from micdot.config import Config
@@ -46,6 +47,7 @@ def test_save_enables_autostart_when_true(api, mocker):
     enable = mocker.patch("micdot.settings_window.enable_autostart")
     mocker.patch("micdot.settings_window.disable_autostart")
     api.save({**_DATA, "autostart": True})
+    time.sleep(0.05)
     enable.assert_called_once()
 
 
@@ -53,6 +55,7 @@ def test_save_disables_autostart_when_false(api, mocker):
     mocker.patch("micdot.settings_window.enable_autostart")
     disable = mocker.patch("micdot.settings_window.disable_autostart")
     api.save({**_DATA, "autostart": False})
+    time.sleep(0.05)
     disable.assert_called_once()
 
 
@@ -62,7 +65,10 @@ def test_save_destroys_window(api, mocker):
     window = MagicMock()
     api.set_window(window)
     api.save(_DATA)
-    window.destroy.assert_called_once()
+    time.sleep(0.05)  # wait for _post_save daemon thread
+    window.native.performSelectorOnMainThread_withObject_waitUntilDone_.assert_called_once_with(
+        b"close", None, False
+    )
 
 
 def test_save_enables_autostart_with_executable_when_frozen(api, mocker):
@@ -73,6 +79,7 @@ def test_save_enables_autostart_with_executable_when_frozen(api, mocker):
     mocker.patch("micdot.settings_window.disable_autostart")
 
     api.save({**_DATA, "autostart": True})
+    time.sleep(0.05)
 
     enable.assert_called_once_with(fake_exe)
 
@@ -84,6 +91,7 @@ def test_save_enables_autostart_with_python_command_when_not_frozen(api, mocker)
     mocker.patch("micdot.settings_window.disable_autostart")
 
     api.save({**_DATA, "autostart": True})
+    time.sleep(0.05)
 
     args = enable.call_args[0][0]
     assert "-m" in args and "micdot.main" in args

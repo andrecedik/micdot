@@ -139,17 +139,21 @@ class Api:
         self._window = window
 
     def _close_window(self) -> None:
-        # window.destroy() must run on the main thread. Dispatching via
-        # NSOperationQueue is the correct PyObjC pattern — the main thread is
-        # already running the NSApp event loop inside webview.start(), so the
-        # queued block is picked up immediately.
-        try:
-            from Foundation import NSOperationQueue
-            NSOperationQueue.mainQueue().addOperationWithBlock_(self._window.destroy)
-            log.debug("Window close dispatched to main thread via NSOperationQueue")
-        except Exception:
-            log.exception("NSOperationQueue dispatch failed; calling destroy() directly")
-            self._window.destroy()
+        # Dispatch NSWindow.close directly to the main thread using
+        # performSelectorOnMainThread. This is a pure ObjC selector dispatch —
+        # no Python callable wrapping, so there are no Python GC or GIL issues
+        # that plagued the AppHelper.callAfter / NSOperationQueue approaches.
+        native = getattr(self._window, "native", None)
+        if native is not None:
+            try:
+                native.performSelectorOnMainThread_withObject_waitUntilDone_(
+                    b"close", None, False
+                )
+                log.debug("Window close dispatched via performSelectorOnMainThread")
+                return
+            except Exception:
+                log.exception("performSelectorOnMainThread dispatch failed; falling back")
+        self._window.destroy()
 
     def save(self, data: dict) -> None:
         log.info("Saving settings")
