@@ -46,9 +46,12 @@ def _reload_config(
     state.mqtt.stop()
     state.mqtt = new_mqtt
     state.mqtt.start()
+    log.debug("MQTT reloaded; stopping hotkey listener (hotkey=%r)", new_config.hotkey)
     state.hotkey_listener.stop()
+    log.debug("Old hotkey listener stopped; starting new")
     state.hotkey_listener = new_hotkey
     state.hotkey_listener.start()
+    log.debug("New hotkey listener started")
     state.config = new_config
     log.info("Config reloaded")
 
@@ -99,7 +102,10 @@ def main() -> None:
         def _on_exit() -> None:
             rc = settings_proc[0].wait() if settings_proc[0] else 1
             if rc == 0:
-                _reload_config(state, DEFAULT_CONFIG_PATH, on_toggle)
+                try:
+                    _reload_config(state, DEFAULT_CONFIG_PATH, on_toggle)
+                except Exception:
+                    log.exception("Uncaught error during config reload")
 
         threading.Thread(target=_on_exit, daemon=True).start()
 

@@ -25,3 +25,4 @@ class HotkeyListener:
     def stop(self) -> None:
         if self._listener:
             self._listener.stop()
+            self._listener.join(timeout=2.0)
