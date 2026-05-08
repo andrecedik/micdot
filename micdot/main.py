@@ -8,9 +8,12 @@ from typing import Callable
 from micdot.audio.backend import get_backend
 from micdot.config import Config, DEFAULT_CONFIG_PATH
 from micdot.hotkey import HotkeyListener
+from micdot.log import setup as setup_logging
 from micdot.mqtt_client import MQTTClient
 from micdot.poller import Poller
 from micdot.tray import TrayIcon
+
+log = setup_logging()
 
 
 class _State:
@@ -32,12 +35,14 @@ def _reload_config(
     config_path: Path,
     on_toggle: Callable[[], None],
 ) -> None:
+    log.info("Reloading config from %s", config_path)
     new_config = Config.load(config_path)
     try:
         new_mqtt = MQTTClient(new_config, on_button_press=on_toggle)
         new_hotkey = HotkeyListener(new_config.hotkey, callback=on_toggle)
     except Exception:
-        return  # keep existing components running if construction fails
+        log.exception("Failed to construct components during reload — keeping existing config")
+        return
     state.mqtt.stop()
     state.mqtt = new_mqtt
     state.mqtt.start()
@@ -45,6 +50,7 @@ def _reload_config(
     state.hotkey_listener = new_hotkey
     state.hotkey_listener.start()
     state.config = new_config
+    log.info("Config reloaded")
 
 
 def _settings_cmd(config_path: Path) -> list[str]:
@@ -61,17 +67,22 @@ def main() -> None:
         run_settings(path)
         return
 
+    log.info("MicDot starting")
     config = Config.load(DEFAULT_CONFIG_PATH)
+    log.info("Config loaded (mqtt_host=%r, hotkey=%r)", config.mqtt_host, config.hotkey)
     backend = get_backend()
+    log.info("Audio backend: %s", type(backend).__name__)
 
     def on_toggle() -> None:
         poller.toggle()
 
     def on_state_change(muted: bool) -> None:
+        log.debug("Mic state changed: muted=%s", muted)
         state.mqtt.publish_state(muted)
         tray.set_muted(muted)
 
     def on_quit() -> None:
+        log.info("Quit requested")
         state.hotkey_listener.stop()
         poller.stop()
         state.mqtt.stop()
@@ -82,12 +93,12 @@ def main() -> None:
     def open_settings() -> None:
         if settings_proc[0] is not None and settings_proc[0].poll() is None:
             return
-        settings_proc[0] = subprocess.Popen(
-            _settings_cmd(DEFAULT_CONFIG_PATH)
-        )
+        log.info("Opening settings window")
+        settings_proc[0] = subprocess.Popen(_settings_cmd(DEFAULT_CONFIG_PATH))
 
         def _on_exit() -> None:
-            if settings_proc[0] is not None and settings_proc[0].wait() == 0:
+            rc = settings_proc[0].wait() if settings_proc[0] else 1
+            if rc == 0:
                 _reload_config(state, DEFAULT_CONFIG_PATH, on_toggle)
 
         threading.Thread(target=_on_exit, daemon=True).start()
@@ -107,6 +118,7 @@ def main() -> None:
     state.mqtt.start()
     poller.start()
     state.hotkey_listener.start()
+    log.info("MicDot running")
     tray.run()
 
 

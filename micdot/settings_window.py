@@ -3,11 +3,15 @@ from __future__ import annotations
 import json
 import shutil
 import sys
+import threading
 from dataclasses import asdict
 from pathlib import Path
 
 from micdot.autostart import enable_autostart, disable_autostart
 from micdot.config import Config, DEFAULT_CONFIG_PATH
+from micdot.log import setup as setup_logging
+
+log = setup_logging()
 
 
 _HTML = """\
@@ -135,6 +139,7 @@ class Api:
         self._window = window
 
     def save(self, data: dict) -> None:
+        log.info("Saving settings")
         new = Config(
             mqtt_host=str(data["mqtt_host"]),
             mqtt_port=int(data["mqtt_port"]),
@@ -155,6 +160,7 @@ class Api:
             autostart=bool(data["autostart"]),
         )
         new.save(self._config_path)
+        log.info("Config saved to %s", self._config_path)
         if new.autostart:
             if getattr(sys, "frozen", False):
                 enable_autostart(sys.executable)
@@ -165,7 +171,12 @@ class Api:
             disable_autostart()
         self._saved = True
         if self._window is not None:
-            self._window.destroy()
+            # destroy() must not be called from within the JS API callback —
+            # doing so deadlocks pywebview on macOS because destroy() needs the
+            # main thread while that thread is blocked waiting for this call to
+            # return. Schedule it on a new thread so we return to JS first.
+            win = self._window
+            threading.Thread(target=win.destroy, daemon=True).start()
 
 
 def run(config_path: Path) -> None:

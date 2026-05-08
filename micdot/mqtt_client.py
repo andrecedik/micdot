@@ -1,8 +1,11 @@
 from __future__ import annotations
 import json
+import logging
 from typing import Callable
 import paho.mqtt.client as mqtt
 from micdot.config import Config
+
+log = logging.getLogger("micdot")
 
 
 class MQTTClient:
@@ -21,7 +24,9 @@ class MQTTClient:
 
     def start(self) -> None:
         if not self._configured:
+            log.debug("MQTT not configured — skipping connection")
             return
+        log.info("MQTT connecting to %s:%d", self._config.mqtt_host, self._config.mqtt_port)
         self._client.connect_async(
             self._config.mqtt_host, self._config.mqtt_port, keepalive=60
         )
@@ -30,6 +35,7 @@ class MQTTClient:
     def stop(self) -> None:
         if not self._configured:
             return
+        log.info("MQTT disconnecting")
         self._client.loop_stop()
         self._client.disconnect()
 
@@ -49,8 +55,11 @@ class MQTTClient:
 
     def _on_connect(self, client, userdata, flags, rc) -> None:
         if rc == 0:
+            log.info("MQTT connected")
             client.subscribe("micdot/button")
             self._publish_autodiscovery()
+        else:
+            log.warning("MQTT connection failed (rc=%d)", rc)
 
     def _on_message(self, client, userdata, message) -> None:
         if message.topic == "micdot/button" and message.payload == b"pressed":
