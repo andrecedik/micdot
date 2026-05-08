@@ -46,14 +46,28 @@ def _reload_config(
     state.mqtt.stop()
     state.mqtt = new_mqtt
     state.mqtt.start()
-    log.debug("MQTT reloaded; stopping hotkey listener (hotkey=%r)", new_config.hotkey)
-    state.hotkey_listener.stop()
-    log.debug("Old hotkey listener stopped; starting new")
-    state.hotkey_listener = new_hotkey
-    state.hotkey_listener.start()
-    log.debug("New hotkey listener started")
-    state.config = new_config
-    log.info("Config reloaded")
+
+    # keyboard.GlobalHotKeys.__init__ calls TSMCurrentKeyboardInputSourceRefCreate
+    # which asserts main-queue on macOS 15 (Sequoia). Dispatch the hotkey lifecycle
+    # to the main thread so the TSM call happens there.
+    def _restart_hotkey() -> None:
+        try:
+            log.debug("Stopping old hotkey listener (main thread)")
+            state.hotkey_listener.stop()
+            log.debug("Starting new hotkey listener (main thread)")
+            state.hotkey_listener = new_hotkey
+            state.hotkey_listener.start()
+            state.config = new_config
+            log.info("Config reloaded")
+        except Exception:
+            log.exception("Error restarting hotkey listener on main thread")
+
+    try:
+        from Foundation import NSOperationQueue
+        NSOperationQueue.mainQueue().addOperationWithBlock_(_restart_hotkey)
+    except Exception:
+        log.exception("Could not dispatch to main thread; restarting hotkey inline")
+        _restart_hotkey()
 
 
 def _settings_cmd(config_path: Path) -> list[str]:
