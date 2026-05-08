@@ -161,7 +161,13 @@ class Api:
         )
         new.save(self._config_path)
         log.info("Config saved to %s", self._config_path)
-        if new.autostart:
+        self._saved = True
+        # Return to JS immediately — launchctl calls in _post_save can be
+        # slow and block the pywebview callback thread, freezing the window.
+        threading.Thread(target=self._post_save, args=(new,), daemon=True).start()
+
+    def _post_save(self, config: Config) -> None:
+        if config.autostart:
             if getattr(sys, "frozen", False):
                 enable_autostart(sys.executable)
             else:
@@ -169,14 +175,9 @@ class Api:
                 enable_autostart(f"{python} -m micdot.main")
         else:
             disable_autostart()
-        self._saved = True
+        log.info("Autostart configured (enabled=%s)", config.autostart)
         if self._window is not None:
-            # destroy() must not be called from within the JS API callback —
-            # doing so deadlocks pywebview on macOS because destroy() needs the
-            # main thread while that thread is blocked waiting for this call to
-            # return. Schedule it on a new thread so we return to JS first.
-            win = self._window
-            threading.Thread(target=win.destroy, daemon=True).start()
+            self._window.destroy()
 
 
 def run(config_path: Path) -> None:
