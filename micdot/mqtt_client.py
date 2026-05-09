@@ -77,6 +77,7 @@ class MQTTClient:
                 "options": ["Muted", "Unmuted"],
                 "state_topic": "micdot/state",
                 "unique_id": "micdot_microphone_state",
+                "icon": "mdi:microphone-plus",
                 "device": {"identifiers": ["micdot"], "name": "MicDot"},
             }),
             retain=True,
