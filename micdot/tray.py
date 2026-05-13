@@ -41,6 +41,10 @@ class TrayIcon:
                 pystray.MenuItem("Quit", self._quit),
             ),
         )
+        if sys.platform == "darwin":
+            status_item = getattr(self._icon, "_status_item", None)
+            if status_item is not None:
+                status_item.setAutosaveName_("MicDot")
 
     def set_muted(self, muted: bool) -> None:
         self._icon.icon = _make_icon((0, 200, 0) if muted else (200, 0, 0))
