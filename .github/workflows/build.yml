@@ -39,9 +39,15 @@ jobs:
           zip -r "../${ZIPNAME}" MicDot.app
           echo "ZIPNAME=${ZIPNAME}" >> "$GITHUB_ENV"
 
+      - name: Extract release notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md > release_notes.md
+
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.ZIPNAME }}
+          body_path: release_notes.md
           draft: false
           prerelease: false

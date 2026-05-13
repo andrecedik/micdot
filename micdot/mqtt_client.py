@@ -43,7 +43,7 @@ class MQTTClient:
         if not self._configured:
             return
         self._client.publish(
-            "micdot/state", "muted" if muted else "unmuted", retain=True
+            "micdot/state", "Muted" if muted else "Unmuted", retain=True
         )
         color = self._config.color_muted if muted else self._config.color_unmuted
         self._client.publish(
@@ -67,14 +67,17 @@ class MQTTClient:
 
     def _publish_autodiscovery(self) -> None:
         self._client.publish(
-            "homeassistant/binary_sensor/micdot/state/config",
+            "homeassistant/binary_sensor/micdot/state/config", "", retain=True
+        )
+        self._client.publish(
+            "homeassistant/sensor/micdot/state/config",
             json.dumps({
                 "name": "Microphone",
-                "device_class": "sound",
+                "device_class": "enum",
+                "options": ["Muted", "Unmuted"],
                 "state_topic": "micdot/state",
-                "payload_on": "muted",
-                "payload_off": "unmuted",
                 "unique_id": "micdot_microphone_state",
+                "icon": "mdi:microphone-plus",
                 "device": {"identifiers": ["micdot"], "name": "MicDot"},
             }),
             retain=True,
