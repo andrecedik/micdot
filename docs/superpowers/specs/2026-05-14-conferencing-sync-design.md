@@ -137,11 +137,13 @@ class ConferencingSync:
     ) -> None: ...
 
     def start(self) -> None:
-        # Filters to compatible + running plugins, starts observing on each.
+        # Filters to compatible plugins. Starts observing on those currently
+        # running; a lightweight background poll (every 3 s) detects apps that
+        # launch after MicDot starts and registers their observers on demand.
         ...
 
     def stop(self) -> None:
-        # Stops all observers.
+        # Stops all observers and the app-discovery poll thread.
         ...
 
     def on_mute_change(self, muted: bool) -> None:
