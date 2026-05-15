@@ -41,17 +41,18 @@ def test_reload_updates_hotkey_in_place(config_path, mocker):
 
 
 def test_reload_updates_state_config(config_path, mocker):
-    mocker.patch("micdot.main.MQTTClient")
+    mock_mqtt_cls = mocker.patch("micdot.main.MQTTClient")
     state = _State(Config(), MagicMock(), MagicMock(), MagicMock())
 
     _reload_config(state, config_path, MagicMock(), StubAudioBackend())
 
-    assert state.mqtt is mocker.patch("micdot.main.MQTTClient").return_value or True
+    assert state.mqtt is mock_mqtt_cls.return_value
     assert state.config.mqtt_host == "new-host"
 
 
 def test_reload_stops_old_conferencing_sync_and_starts_new(config_path, mocker):
     mocker.patch("micdot.main.MQTTClient")
+    mocker.patch("micdot.main._ax_is_trusted", return_value=True)
     old_sync = MagicMock()
     mock_sync_cls = mocker.patch("micdot.main.ConferencingSync")
     backend = StubAudioBackend()
@@ -62,3 +63,4 @@ def test_reload_stops_old_conferencing_sync_and_starts_new(config_path, mocker):
 
     old_sync.stop.assert_called_once()
     mock_sync_cls.return_value.start.assert_called_once()
+    assert state.conferencing_sync is mock_sync_cls.return_value

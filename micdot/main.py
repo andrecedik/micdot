@@ -51,7 +51,7 @@ def _reload_config(
     state.mqtt.start()
     state.conferencing_sync.stop()
     new_sync = ConferencingSync(PLUGINS, backend)
-    if new_config.conferencing_sync_enabled:
+    if new_config.conferencing_sync_enabled and _ax_is_trusted():
         new_sync.start()
     state.conferencing_sync = new_sync
 
@@ -79,21 +79,24 @@ def _reload_config(
             _update_hotkey()
 
 
+def _ax_is_trusted() -> bool:
+    try:
+        from ApplicationServices import AXIsProcessTrusted
+        return bool(AXIsProcessTrusted())
+    except Exception:
+        return False
+
+
 def _check_accessibility(config: Config) -> None:
     if not config.conferencing_sync_enabled:
         return
-    try:
-        from ApplicationServices import AXIsProcessTrusted
-        if AXIsProcessTrusted():
-            return
-    except Exception:
+    if _ax_is_trusted():
         return
     log.warning(
         "Accessibility permission not granted — conferencing sync disabled. "
         "Grant it in System Settings → Privacy & Security → Accessibility, then restart MicDot."
     )
     try:
-        import subprocess
         subprocess.run(
             ["osascript", "-e",
              'display notification "Grant Accessibility access in System Settings to enable '
@@ -177,13 +180,9 @@ def main() -> None:
     state.mqtt.start()
     poller.start()
     state.hotkey_listener.start()
-    try:
-        from ApplicationServices import AXIsProcessTrusted
-        if config.conferencing_sync_enabled and AXIsProcessTrusted():
-            conferencing_sync.start()
-            log.info("Conferencing sync started")
-    except Exception:
-        log.warning("Could not start conferencing sync", exc_info=True)
+    if config.conferencing_sync_enabled and _ax_is_trusted():
+        conferencing_sync.start()
+        log.info("Conferencing sync started")
     log.info("MicDot running")
     tray.run()
 
