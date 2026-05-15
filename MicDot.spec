@@ -16,6 +16,7 @@ a = Analysis(
         "pystray._darwin",
         "pynput.keyboard._darwin",
         "pynput.mouse._darwin",
+        "websocket",
     ],
     hookspath=[],
     hooksconfig={},

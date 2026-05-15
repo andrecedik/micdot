@@ -13,6 +13,7 @@ dependencies = [
     "pynput>=1.7.6",
     "pywebview>=4.0",
     "pyobjc-framework-ApplicationServices>=9.0; sys_platform == 'darwin'",
+    "websocket-client>=1.0.0",
 ]
 
 [project.scripts]
