@@ -12,6 +12,7 @@ dependencies = [
     "paho-mqtt>=1.6.1,<2.0",
     "pynput>=1.7.6",
     "pywebview>=4.0",
+    "pyobjc-framework-ApplicationServices>=9.0; sys_platform == 'darwin'",
 ]
 
 [project.scripts]
