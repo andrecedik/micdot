@@ -51,7 +51,7 @@ def _reload_config(
     state.mqtt.start()
     state.conferencing_sync.stop()
     new_sync = ConferencingSync(PLUGINS, backend)
-    if new_config.conferencing_sync_enabled and _ax_is_trusted():
+    if new_config.conferencing_sync_enabled:
         new_sync.start()
     state.conferencing_sync = new_sync
 
@@ -87,20 +87,26 @@ def _ax_is_trusted() -> bool:
         return False
 
 
-def _check_accessibility(config: Config) -> None:
+def _needs_accessibility(plugins) -> bool:
+    return any(getattr(p, "requires_accessibility", False) for p in plugins)
+
+
+def _check_accessibility(config: Config, plugins) -> None:
     if not config.conferencing_sync_enabled:
+        return
+    if not _needs_accessibility(plugins):
         return
     if _ax_is_trusted():
         return
     log.warning(
-        "Accessibility permission not granted — conferencing sync disabled. "
+        "Accessibility permission not granted — Zoom/Meet sync disabled. "
         "Grant it in System Settings → Privacy & Security → Accessibility, then restart MicDot."
     )
     try:
         subprocess.run(
             ["osascript", "-e",
              'display notification "Grant Accessibility access in System Settings to enable '
-             'conferencing sync, then restart MicDot." with title "MicDot"'],
+             'Zoom and Meet sync, then restart MicDot." with title "MicDot"'],
             check=False,
         )
     except Exception:
@@ -162,7 +168,7 @@ def main() -> None:
 
         threading.Thread(target=_on_exit, daemon=True).start()
 
-    _check_accessibility(config)
+    _check_accessibility(config, PLUGINS)
     conferencing_sync = ConferencingSync(PLUGINS, backend)
     state = _State(
         config,
@@ -180,7 +186,7 @@ def main() -> None:
     state.mqtt.start()
     poller.start()
     state.hotkey_listener.start()
-    if config.conferencing_sync_enabled and _ax_is_trusted():
+    if config.conferencing_sync_enabled:
         conferencing_sync.start()
         log.info("Conferencing sync started")
     log.info("MicDot running")

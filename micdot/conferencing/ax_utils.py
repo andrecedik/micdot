@@ -20,11 +20,16 @@ _MUTED_KEYWORD = "unmute"
 class AXPlugin(ConferencingPlugin):
     """Base class for plugins that use the macOS Accessibility API.
 
+    requires_accessibility = True signals to main.py that this plugin needs
+    AXIsProcessTrusted() before it can function.
+
     Subclasses must implement:
       - bundle_id, name  (class attributes)
       - _find_mute_element(app_element) -> AX element or None
       - is_in_meeting() -> bool
     """
+
+    requires_accessibility: bool = True
 
     def __init__(self) -> None:
         self._on_change: Callable[[bool], None] | None = None

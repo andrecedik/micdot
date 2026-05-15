@@ -5,10 +5,18 @@ from collections.abc import Callable
 
 
 def _version_tuple(v: str) -> tuple[int, ...]:
-    try:
-        return tuple(int(x) for x in v.split("."))
-    except ValueError:
-        return ()
+    parts = []
+    for segment in v.split("."):
+        digits = ""
+        for ch in segment:
+            if ch.isdigit():
+                digits += ch
+            else:
+                break
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts)
 
 
 class ConferencingPlugin(ABC):
@@ -17,6 +25,7 @@ class ConferencingPlugin(ABC):
     supported_platforms: tuple[str, ...] = ("darwin",)
     min_version: str | None = None
     max_version: str | None = None
+    requires_accessibility: bool = False
 
     def is_compatible(self) -> bool:
         if sys.platform not in self.supported_platforms:
