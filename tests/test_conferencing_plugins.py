@@ -1,3 +1,4 @@
+import json
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -18,7 +19,7 @@ class TestZoomPlugin:
 
     def test_bundle_id(self):
         from micdot.conferencing.plugins.zoom import ZoomPlugin
-        assert ZoomPlugin.bundle_id == "com.zoom.xpc"
+        assert ZoomPlugin.bundle_id == "us.zoom.xos"
 
     def test_name(self):
         from micdot.conferencing.plugins.zoom import ZoomPlugin
@@ -40,9 +41,10 @@ class TestZoomPlugin:
         from micdot.conferencing.plugins.zoom import ZoomPlugin
         plugin = ZoomPlugin()
         fake_el = MagicMock()
-        mocker.patch.object(plugin, "_walk", return_value=fake_el)
-        app_el = MagicMock()
-        result = plugin._find_mute_element(app_el)
+        fake_app_el = MagicMock()
+        mocker.patch.object(plugin, "_all_zoom_elements", return_value=iter([fake_app_el]))
+        mocker.patch.object(plugin, "_walk_desc", return_value=fake_el)
+        result = plugin._find_mute_element(None)
         assert result is fake_el
 
     def test_get_mute_returns_none_when_not_in_meeting(self, mocker):
@@ -57,9 +59,8 @@ class TestZoomPlugin:
         plugin = ZoomPlugin()
         mocker.patch.object(plugin, "is_running", return_value=True)
         mocker.patch.object(plugin, "is_in_meeting", return_value=True)
-        mocker.patch.object(plugin, "_get_app_element", return_value=MagicMock())
         mocker.patch.object(plugin, "_find_mute_element", return_value=MagicMock())
-        mocker.patch.object(plugin, "_read_title", return_value="Unmute my audio")
+        mocker.patch.object(plugin, "_get_attr", return_value=(0, "Unmute my audio"))
         assert plugin.get_mute() is True
 
     def test_get_mute_false_when_title_contains_mute_only(self, mocker):
@@ -67,9 +68,8 @@ class TestZoomPlugin:
         plugin = ZoomPlugin()
         mocker.patch.object(plugin, "is_running", return_value=True)
         mocker.patch.object(plugin, "is_in_meeting", return_value=True)
-        mocker.patch.object(plugin, "_get_app_element", return_value=MagicMock())
         mocker.patch.object(plugin, "_find_mute_element", return_value=MagicMock())
-        mocker.patch.object(plugin, "_read_title", return_value="Mute my audio")
+        mocker.patch.object(plugin, "_get_attr", return_value=(0, "Mute my audio"))
         assert plugin.get_mute() is False
 
 
@@ -86,28 +86,66 @@ class TestTeamsPlugin:
         from micdot.conferencing.plugins.teams import TeamsPlugin
         assert TeamsPlugin.name == "Microsoft Teams"
 
-    def test_is_in_meeting_false_when_no_app_element(self, mocker):
+    def test_get_mute_returns_none_initially(self):
         from micdot.conferencing.plugins.teams import TeamsPlugin
-        plugin = TeamsPlugin()
-        mocker.patch.object(plugin, "_get_app_pid", return_value=None)
-        assert plugin.is_in_meeting() is False
+        assert TeamsPlugin().get_mute() is None
 
-    def test_get_mute_returns_none_when_not_in_meeting(self, mocker):
+    def test_is_in_meeting_false_initially(self):
+        from micdot.conferencing.plugins.teams import TeamsPlugin
+        assert TeamsPlugin().is_in_meeting() is False
+
+    def test_on_message_updates_state_when_in_meeting(self, mocker):
         from micdot.conferencing.plugins.teams import TeamsPlugin
         plugin = TeamsPlugin()
-        mocker.patch.object(plugin, "is_running", return_value=True)
-        mocker.patch.object(plugin, "is_in_meeting", return_value=False)
+        cb = mocker.Mock()
+        plugin._on_change = cb
+        msg = json.dumps({"meetingUpdate": {"meetingState": {"isInMeeting": True, "isMuted": True}}})
+        plugin._on_message(None, msg)
+        assert plugin.is_in_meeting() is True
+        assert plugin.get_mute() is True
+        cb.assert_called_once_with(True)
+
+    def test_on_message_clears_state_when_not_in_meeting(self, mocker):
+        from micdot.conferencing.plugins.teams import TeamsPlugin
+        plugin = TeamsPlugin()
+        plugin._in_meeting = True
+        plugin._muted = True
+        msg = json.dumps({"meetingUpdate": {"meetingState": {"isInMeeting": False, "isMuted": False}}})
+        plugin._on_message(None, msg)
+        assert plugin.is_in_meeting() is False
         assert plugin.get_mute() is None
 
-    def test_get_mute_true_when_title_contains_unmute(self, mocker):
+    def test_on_message_saves_token_refresh(self, mocker):
         from micdot.conferencing.plugins.teams import TeamsPlugin
         plugin = TeamsPlugin()
-        mocker.patch.object(plugin, "is_running", return_value=True)
-        mocker.patch.object(plugin, "is_in_meeting", return_value=True)
-        mocker.patch.object(plugin, "_get_app_element", return_value=MagicMock())
-        mocker.patch.object(plugin, "_find_mute_element", return_value=MagicMock())
-        mocker.patch.object(plugin, "_read_title", return_value="Unmute microphone")
-        assert plugin.get_mute() is True
+        save = mocker.patch.object(plugin, "_save_token")
+        plugin._on_message(None, json.dumps({"tokenRefresh": "tok123"}))
+        save.assert_called_once_with("tok123")
+
+    def test_set_mute_sends_toggle_when_state_differs(self, mocker):
+        from micdot.conferencing.plugins.teams import TeamsPlugin
+        plugin = TeamsPlugin()
+        plugin._in_meeting = True
+        plugin._muted = False
+        send = mocker.patch.object(plugin, "_send")
+        plugin.set_mute(True)
+        send.assert_called_once_with({"action": "toggle-mute"})
+
+    def test_set_mute_noop_when_state_already_matches(self, mocker):
+        from micdot.conferencing.plugins.teams import TeamsPlugin
+        plugin = TeamsPlugin()
+        plugin._in_meeting = True
+        plugin._muted = True
+        send = mocker.patch.object(plugin, "_send")
+        plugin.set_mute(True)
+        send.assert_not_called()
+
+    def test_set_mute_noop_when_not_in_meeting(self, mocker):
+        from micdot.conferencing.plugins.teams import TeamsPlugin
+        plugin = TeamsPlugin()
+        send = mocker.patch.object(plugin, "_send")
+        plugin.set_mute(True)
+        send.assert_not_called()
 
 
 # ------------------------------------------------------------------ #
