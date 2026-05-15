@@ -17,6 +17,7 @@ class Config:
     led_brightness: int = 128
     hotkey: str = "ctrl+shift+m"
     autostart: bool = False
+    conferencing_sync_enabled: bool = True
 
     def save(self, path: Path = DEFAULT_CONFIG_PATH) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
