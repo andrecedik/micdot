@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
+from micdot.audio.backend import StubAudioBackend
 from micdot.config import Config
 from micdot.main import _State, _reload_config
 
@@ -14,10 +15,10 @@ def config_path(tmp_path):
 def test_reload_stops_old_mqtt_and_starts_new(config_path, mocker):
     old_mqtt = MagicMock()
     mock_mqtt_cls = mocker.patch("micdot.main.MQTTClient")
-    state = _State(Config(), old_mqtt, MagicMock())
+    state = _State(Config(), old_mqtt, MagicMock(), MagicMock())
     on_toggle = MagicMock()
 
-    _reload_config(state, config_path, on_toggle)
+    _reload_config(state, config_path, on_toggle, StubAudioBackend())
 
     old_mqtt.stop.assert_called_once()
     assert mock_mqtt_cls.call_args[0][0].mqtt_host == "new-host"
@@ -28,10 +29,10 @@ def test_reload_stops_old_mqtt_and_starts_new(config_path, mocker):
 def test_reload_updates_hotkey_in_place(config_path, mocker):
     mocker.patch("micdot.main.MQTTClient")
     old_hotkey = MagicMock()
-    state = _State(Config(), MagicMock(), old_hotkey)
+    state = _State(Config(), MagicMock(), old_hotkey, MagicMock())
     on_toggle = MagicMock()
 
-    _reload_config(state, config_path, on_toggle)
+    _reload_config(state, config_path, on_toggle, StubAudioBackend())
 
     # Listener is NOT stopped/replaced — only update() is called
     old_hotkey.stop.assert_not_called()
@@ -41,9 +42,23 @@ def test_reload_updates_hotkey_in_place(config_path, mocker):
 
 def test_reload_updates_state_config(config_path, mocker):
     mocker.patch("micdot.main.MQTTClient")
-    state = _State(Config(), MagicMock(), MagicMock())
+    state = _State(Config(), MagicMock(), MagicMock(), MagicMock())
 
-    _reload_config(state, config_path, MagicMock())
+    _reload_config(state, config_path, MagicMock(), StubAudioBackend())
 
     assert state.mqtt is mocker.patch("micdot.main.MQTTClient").return_value or True
     assert state.config.mqtt_host == "new-host"
+
+
+def test_reload_stops_old_conferencing_sync_and_starts_new(config_path, mocker):
+    mocker.patch("micdot.main.MQTTClient")
+    old_sync = MagicMock()
+    mock_sync_cls = mocker.patch("micdot.main.ConferencingSync")
+    backend = StubAudioBackend()
+    state = _State(Config(), MagicMock(), MagicMock(), old_sync)
+    on_toggle = MagicMock()
+
+    _reload_config(state, config_path, on_toggle, backend)
+
+    old_sync.stop.assert_called_once()
+    mock_sync_cls.return_value.start.assert_called_once()

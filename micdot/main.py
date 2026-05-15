@@ -5,35 +5,39 @@ import threading
 from pathlib import Path
 from typing import Callable
 
-from micdot.audio.backend import get_backend
+from micdot.audio.backend import get_backend, AudioBackend
 from micdot.config import Config, DEFAULT_CONFIG_PATH
 from micdot.hotkey import HotkeyListener
 from micdot.log import setup as setup_logging
 from micdot.mqtt_client import MQTTClient
 from micdot.poller import Poller
 from micdot.tray import TrayIcon
+from micdot.conferencing import ConferencingSync, PLUGINS
 
 log = setup_logging()
 
 
 class _State:
-    __slots__ = ("config", "mqtt", "hotkey_listener")
+    __slots__ = ("config", "mqtt", "hotkey_listener", "conferencing_sync")
 
     def __init__(
         self,
         config: Config,
         mqtt: MQTTClient,
         hotkey_listener: HotkeyListener,
+        conferencing_sync: ConferencingSync,
     ) -> None:
         self.config = config
         self.mqtt = mqtt
         self.hotkey_listener = hotkey_listener
+        self.conferencing_sync = conferencing_sync
 
 
 def _reload_config(
     state: _State,
     config_path: Path,
     on_toggle: Callable[[], None],
+    backend: AudioBackend,
 ) -> None:
     log.info("Reloading config from %s", config_path)
     new_config = Config.load(config_path)
@@ -45,6 +49,11 @@ def _reload_config(
     state.mqtt.stop()
     state.mqtt = new_mqtt
     state.mqtt.start()
+    state.conferencing_sync.stop()
+    new_sync = ConferencingSync(PLUGINS, backend)
+    if new_config.conferencing_sync_enabled:
+        new_sync.start()
+    state.conferencing_sync = new_sync
 
     # HotKey construction calls TISCopyCurrentKeyboardInputSource which asserts
     # dispatch_assert_queue(main_queue) on macOS 15+. Dispatch to main thread.
@@ -68,6 +77,31 @@ def _reload_config(
         except Exception:
             log.exception("Could not dispatch to main thread; updating hotkey inline")
             _update_hotkey()
+
+
+def _check_accessibility(config: Config) -> None:
+    if not config.conferencing_sync_enabled:
+        return
+    try:
+        from ApplicationServices import AXIsProcessTrusted
+        if AXIsProcessTrusted():
+            return
+    except Exception:
+        return
+    log.warning(
+        "Accessibility permission not granted — conferencing sync disabled. "
+        "Grant it in System Settings → Privacy & Security → Accessibility, then restart MicDot."
+    )
+    try:
+        import subprocess
+        subprocess.run(
+            ["osascript", "-e",
+             'display notification "Grant Accessibility access in System Settings to enable '
+             'conferencing sync, then restart MicDot." with title "MicDot"'],
+            check=False,
+        )
+    except Exception:
+        pass
 
 
 def _settings_cmd(config_path: Path) -> list[str]:
@@ -97,12 +131,14 @@ def main() -> None:
         log.debug("Mic state changed: muted=%s", muted)
         state.mqtt.publish_state(muted)
         tray.set_muted(muted)
+        state.conferencing_sync.on_mute_change(muted)
 
     def on_quit() -> None:
         log.info("Quit requested")
         state.hotkey_listener.stop()
         poller.stop()
         state.mqtt.stop()
+        state.conferencing_sync.stop()
         sys.exit(0)
 
     settings_proc: list[subprocess.Popen | None] = [None]
@@ -117,16 +153,19 @@ def main() -> None:
             rc = settings_proc[0].wait() if settings_proc[0] else 1
             if rc == 0:
                 try:
-                    _reload_config(state, DEFAULT_CONFIG_PATH, on_toggle)
+                    _reload_config(state, DEFAULT_CONFIG_PATH, on_toggle, backend)
                 except Exception:
                     log.exception("Uncaught error during config reload")
 
         threading.Thread(target=_on_exit, daemon=True).start()
 
+    _check_accessibility(config)
+    conferencing_sync = ConferencingSync(PLUGINS, backend)
     state = _State(
         config,
         MQTTClient(config, on_button_press=on_toggle),
         HotkeyListener(config.hotkey, callback=on_toggle),
+        conferencing_sync,
     )
     poller = Poller(backend, on_change=on_state_change)
     tray = TrayIcon(
@@ -138,6 +177,13 @@ def main() -> None:
     state.mqtt.start()
     poller.start()
     state.hotkey_listener.start()
+    try:
+        from ApplicationServices import AXIsProcessTrusted
+        if config.conferencing_sync_enabled and AXIsProcessTrusted():
+            conferencing_sync.start()
+            log.info("Conferencing sync started")
+    except Exception:
+        log.warning("Could not start conferencing sync", exc_info=True)
     log.info("MicDot running")
     tray.run()
 
