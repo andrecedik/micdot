@@ -10,6 +10,7 @@ from pathlib import Path
 from micdot.autostart import enable_autostart, disable_autostart
 from micdot.config import Config, DEFAULT_CONFIG_PATH
 from micdot.log import setup as setup_logging
+from micdot.version import get_version
 
 log = setup_logging()
 
@@ -23,7 +24,7 @@ _HTML = """\
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:13px;
   background:#f0f0f0;padding:20px;color:#222}
-h1{font-size:15px;font-weight:600;margin-bottom:16px;color:#111}
+h1{font-size:15px;font-weight:600;margin-bottom:12px;color:#111}
 .lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;
   color:#888;margin-bottom:6px}
 .group{background:#fff;border-radius:8px;border:1px solid #e5e5e5;
@@ -44,10 +45,25 @@ input[type=color]{width:22px;height:22px;border:1px solid #ccc;border-radius:4px
 button{width:100%;padding:8px;border-radius:6px;background:#007aff;color:#fff;
   border:none;font-size:13px;font-weight:500;cursor:pointer}
 button:disabled{opacity:.6;cursor:default}
+nav.tabs{display:flex;gap:2px;background:#e0e0e0;border-radius:8px;padding:2px;margin-bottom:16px}
+.tab-btn{flex:1;padding:5px;border:none;background:transparent;font-size:12px;font-weight:500;
+  color:#555;border-radius:6px;cursor:pointer}
+.tab-btn.active{background:#fff;color:#111;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.pane.hidden{display:none}
+.link-row{display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid #e5e5e5;
+  text-decoration:none;color:#007aff;font-size:13px;cursor:pointer}
+.link-row:last-child{border-bottom:none}
+.about-app{padding:16px 12px 4px;font-size:15px;font-weight:600;color:#111}
+.about-ver{padding:2px 12px 14px;font-size:12px;color:#888}
 </style>
 </head>
 <body>
-<h1>MicDot Settings</h1>
+<h1>MicDot</h1>
+<nav class="tabs">
+  <button class="tab-btn" data-tab="settings">Settings</button>
+  <button class="tab-btn" data-tab="about">About</button>
+</nav>
+<section class="pane" id="pane-settings">
 <div class="lbl">MQTT</div>
 <div class="group">
   <div class="row"><label>Host</label>
@@ -81,8 +97,37 @@ button:disabled{opacity:.6;cursor:default}
   <input type="checkbox" id="autostart">
 </div>
 <button id="btn">Save</button>
+</section>
+<section class="pane" id="pane-about">
+<div class="group">
+  <div class="about-app">MicDot</div>
+  <div class="about-ver" id="about-version"></div>
+</div>
+<div class="lbl">LINKS</div>
+<div class="group">
+  <a class="link-row" href="#" data-url="https://github.com/andrecedik/micdot">GitHub Repository ↗</a>
+  <a class="link-row" href="#" data-url="https://donatr.ee/andrecedik">Support me ↗</a>
+</div>
+</section>
 <script>
 var c=CONFIG_PLACEHOLDER;
+var initialTab=INITIAL_TAB_PLACEHOLDER;
+var appVersion=VERSION_PLACEHOLDER;
+document.getElementById('about-version').textContent='Version '+appVersion;
+var panes=document.querySelectorAll('.pane');
+var tabBtns=document.querySelectorAll('.tab-btn');
+function showTab(name){
+  panes.forEach(function(p){p.classList.toggle('hidden',p.id!=='pane-'+name)});
+  tabBtns.forEach(function(b){b.classList.toggle('active',b.dataset.tab===name)});
+}
+tabBtns.forEach(function(b){b.addEventListener('click',function(){showTab(b.dataset.tab)})});
+showTab(initialTab);
+document.querySelectorAll('[data-url]').forEach(function(el){
+  el.addEventListener('click',function(e){
+    e.preventDefault();
+    window.pywebview.api.open_url(el.dataset.url);
+  });
+});
 document.getElementById('mqtt_host').value=c.mqtt_host;
 document.getElementById('mqtt_port').value=c.mqtt_port;
 document.getElementById('mqtt_username').value=c.mqtt_username;
@@ -123,6 +168,13 @@ document.getElementById('btn').addEventListener('click',function(){
 </script>
 </body>
 </html>"""
+
+
+def _build_html(config: Config, initial_tab: str, version: str) -> str:
+    html = _HTML.replace("CONFIG_PLACEHOLDER", json.dumps(asdict(config)))
+    html = html.replace("INITIAL_TAB_PLACEHOLDER", json.dumps(initial_tab))
+    html = html.replace("VERSION_PLACEHOLDER", json.dumps(version))
+    return html
 
 
 class Api:
@@ -202,11 +254,13 @@ class Api:
         log.info("Autostart configured (enabled=%s)", config.autostart)
 
 
-def run(config_path: Path) -> None:
+def run(config_path: Path, initial_tab: str = "settings") -> None:
     import webview  # deferred so tests never need pywebview mocked
+    if initial_tab not in {"settings", "about"}:
+        initial_tab = "settings"
     config = Config.load(config_path)
     api = Api(config_path)
-    html = _HTML.replace("CONFIG_PLACEHOLDER", json.dumps(asdict(config)))
+    html = _build_html(config, initial_tab, get_version())
     window = webview.create_window(
         "MicDot Settings",
         html=html,
@@ -221,5 +275,12 @@ def run(config_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_CONFIG_PATH
-    run(path)
+    argv = sys.argv[1:]
+    tab = "settings"
+    if "--tab" in argv:
+        i = argv.index("--tab")
+        if i + 1 < len(argv):
+            tab = argv[i + 1]
+            del argv[i:i + 2]
+    path = Path(argv[0]) if argv else DEFAULT_CONFIG_PATH
+    run(path, initial_tab=tab)

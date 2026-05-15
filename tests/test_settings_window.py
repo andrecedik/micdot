@@ -3,7 +3,7 @@ import time
 import pytest
 from unittest.mock import MagicMock
 from micdot.config import Config
-from micdot.settings_window import Api
+from micdot.settings_window import Api, _build_html
 
 
 @pytest.fixture
@@ -94,3 +94,41 @@ def test_save_enables_autostart_with_python_command_when_not_frozen(api, mocker)
 
     args = enable.call_args[0][0]
     assert "-m" in args and "micdot.main" in args
+
+
+def test_build_html_substitutes_all_placeholders(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert "CONFIG_PLACEHOLDER" not in html
+    assert "INITIAL_TAB_PLACEHOLDER" not in html
+    assert "VERSION_PLACEHOLDER" not in html
+
+
+def test_build_html_sets_initial_tab_settings(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert '"settings"' in html
+
+
+def test_build_html_sets_initial_tab_about(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "about", "0.5.0")
+    assert '"about"' in html
+
+
+def test_build_html_injects_version(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "1.2.3")
+    assert "1.2.3" in html
+
+
+def test_build_html_includes_github_link(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert "https://github.com/andrecedik/micdot" in html
+
+
+def test_build_html_includes_support_link(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert "https://donatr.ee/andrecedik" in html
