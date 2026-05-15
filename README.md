@@ -146,3 +146,9 @@ tests/                Unit tests (pytest + pytest-mock)
 ### First-launch Gatekeeper note
 
 MicDot is not signed with an Apple Developer certificate. On first launch, right-click the app and choose **Open** to bypass Gatekeeper.
+
+## Support me
+
+<a href="https://donatr.ee/andrecedik">
+  <img src="https://img.shields.io/badge/donatr.ee-All%20Donation%20Methods-6c5ce7?logoColor=white" alt="donatr.ee">
+</a>
