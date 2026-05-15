@@ -4,6 +4,7 @@ import json
 import shutil
 import sys
 import threading
+import webbrowser
 from dataclasses import asdict
 from pathlib import Path
 
@@ -252,6 +253,13 @@ class Api:
         else:
             disable_autostart()
         log.info("Autostart configured (enabled=%s)", config.autostart)
+
+    def open_url(self, url: str) -> None:
+        if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+            log.warning("Refusing to open non-http(s) URL: %r", url)
+            return
+        log.info("Opening external URL %s", url)
+        webbrowser.open(url)
 
 
 def run(config_path: Path, initial_tab: str = "settings") -> None:

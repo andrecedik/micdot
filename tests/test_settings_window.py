@@ -132,3 +132,39 @@ def test_build_html_includes_support_link(tmp_path):
     config = Config.load(tmp_path / "config.json")
     html = _build_html(config, "settings", "0.5.0")
     assert "https://donatr.ee/andrecedik" in html
+
+
+def test_open_url_calls_webbrowser_for_https(api, mocker):
+    mock_open = mocker.patch("micdot.settings_window.webbrowser.open")
+    api.open_url("https://github.com/andrecedik/micdot")
+    mock_open.assert_called_once_with("https://github.com/andrecedik/micdot")
+
+
+def test_open_url_calls_webbrowser_for_http(api, mocker):
+    mock_open = mocker.patch("micdot.settings_window.webbrowser.open")
+    api.open_url("http://example.com")
+    mock_open.assert_called_once_with("http://example.com")
+
+
+def test_open_url_rejects_file_scheme(api, mocker):
+    mock_open = mocker.patch("micdot.settings_window.webbrowser.open")
+    api.open_url("file:///etc/passwd")
+    mock_open.assert_not_called()
+
+
+def test_open_url_rejects_javascript_scheme(api, mocker):
+    mock_open = mocker.patch("micdot.settings_window.webbrowser.open")
+    api.open_url("javascript:alert(1)")
+    mock_open.assert_not_called()
+
+
+def test_open_url_rejects_empty_string(api, mocker):
+    mock_open = mocker.patch("micdot.settings_window.webbrowser.open")
+    api.open_url("")
+    mock_open.assert_not_called()
+
+
+def test_open_url_rejects_non_string(api, mocker):
+    mock_open = mocker.patch("micdot.settings_window.webbrowser.open")
+    api.open_url(None)
+    mock_open.assert_not_called()
