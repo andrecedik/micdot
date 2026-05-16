@@ -8,8 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Conferencing sync** — bidirectional mute sync with running video-call apps. When you mute in Zoom, Teams, or Google Meet, MicDot follows; when you mute via MicDot, the app follows. Auto-detected; no configuration needed.
+- **Teams plugin** uses the Teams Local API over WebSocket — no Accessibility permission required.
+- **Zoom plugin** supports Zoom 6 and 7, including Zoom 7's multi-process AX tree and `AXDescription`-based button detection.
+- **Google Meet plugin** — best-effort detection via browser tab titles (Chrome, Firefox, Safari).
+- `conferencing_sync_enabled` config flag to opt out of conferencing sync.
 - About tab in settings window showing app version, GitHub link, and a "Support me" donate link.
 - "About" tray menu item that opens the About tab directly.
+- Version resolver reads from `NSBundle` when running as a frozen app; falls back to `importlib.metadata` from source.
+
+### Fixed
+
+- Sentinel values in `_build_html` are now collision-safe, preventing config values that contain the old sentinel string from corrupting the rendered settings HTML.
+- `AXIsProcessTrusted` is re-checked on config reload so Accessibility permission changes take effect without restarting.
 
 ## [0.4.0] - 2026-05-13
 
