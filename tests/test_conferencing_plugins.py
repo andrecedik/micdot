@@ -213,3 +213,23 @@ class TestMeetPlugin:
         result = plugin._find_mute_element(fake_app_el)
         walk.assert_called_once_with(fake_window, "AXButton", "microphone", max_depth=20)
         assert result is fake_btn
+
+    def test_get_mute_true_when_button_says_turn_on_microphone(self, mocker):
+        from micdot.conferencing.plugins.meet import MeetPlugin
+        plugin = MeetPlugin()
+        mocker.patch.object(plugin, "is_running", return_value=True)
+        mocker.patch.object(plugin, "is_in_meeting", return_value=True)
+        mocker.patch.object(plugin, "_get_app_element", return_value=MagicMock())
+        mocker.patch.object(plugin, "_find_mute_element", return_value=MagicMock())
+        mocker.patch.object(plugin, "_read_title", return_value="Turn on microphone")
+        assert plugin.get_mute() is True
+
+    def test_get_mute_false_when_button_says_turn_off_microphone(self, mocker):
+        from micdot.conferencing.plugins.meet import MeetPlugin
+        plugin = MeetPlugin()
+        mocker.patch.object(plugin, "is_running", return_value=True)
+        mocker.patch.object(plugin, "is_in_meeting", return_value=True)
+        mocker.patch.object(plugin, "_get_app_element", return_value=MagicMock())
+        mocker.patch.object(plugin, "_find_mute_element", return_value=MagicMock())
+        mocker.patch.object(plugin, "_read_title", return_value="Turn off microphone")
+        assert plugin.get_mute() is False

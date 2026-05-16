@@ -11,7 +11,6 @@ _MUTE_SEARCH_KEYWORD = "microphone"
 class MeetPlugin(AXPlugin):
     bundle_id = "com.google.Chrome"
     name = "Google Meet"
-    max_version = "136.99.99"
 
     def is_in_meeting(self) -> bool:
         app_el = self._get_app_element()
@@ -35,3 +34,19 @@ class MeetPlugin(AXPlugin):
         if meet_window is None:
             return None
         return self._walk(meet_window, "AXButton", _MUTE_SEARCH_KEYWORD, max_depth=20)
+
+    def get_mute(self) -> bool | None:
+        if not self.is_running() or not self.is_in_meeting():
+            return None
+        app_el = self._get_app_element()
+        if app_el is None:
+            return None
+        mute_el = self._find_mute_element(app_el)
+        if mute_el is None:
+            return None
+        title = self._read_title(mute_el)
+        if title is None:
+            return None
+        # "Turn on microphone" → currently muted (clicking unmutes)
+        # "Turn off microphone" → currently unmuted (clicking mutes)
+        return "turn on" in title.lower()
