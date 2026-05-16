@@ -113,18 +113,23 @@ def _check_accessibility(config: Config, plugins) -> None:
         pass
 
 
-def _settings_cmd(config_path: Path) -> list[str]:
+def _settings_cmd(config_path: Path, tab: str = "settings") -> list[str]:
     if getattr(sys, "frozen", False):
-        return [sys.executable, "--settings", str(config_path)]
-    return [sys.executable, "-m", "micdot.settings_window", str(config_path)]
+        return [sys.executable, "--settings", str(config_path), "--tab", tab]
+    return [sys.executable, "-m", "micdot.settings_window", str(config_path), "--tab", tab]
 
 
 def main() -> None:
     if getattr(sys, "frozen", False) and "--settings" in sys.argv:
         idx = sys.argv.index("--settings")
         path = Path(sys.argv[idx + 1]) if idx + 1 < len(sys.argv) else DEFAULT_CONFIG_PATH
+        tab = "settings"
+        if "--tab" in sys.argv:
+            tidx = sys.argv.index("--tab")
+            if tidx + 1 < len(sys.argv):
+                tab = sys.argv[tidx + 1]
         from micdot.settings_window import run as run_settings
-        run_settings(path)
+        run_settings(path, initial_tab=tab)
         return
 
     log.info("MicDot starting")
@@ -152,11 +157,11 @@ def main() -> None:
 
     settings_proc: list[subprocess.Popen | None] = [None]
 
-    def open_settings() -> None:
+    def _open_settings_window(tab: str) -> None:
         if settings_proc[0] is not None and settings_proc[0].poll() is None:
             return
-        log.info("Opening settings window")
-        settings_proc[0] = subprocess.Popen(_settings_cmd(DEFAULT_CONFIG_PATH))
+        log.info("Opening settings window (tab=%s)", tab)
+        settings_proc[0] = subprocess.Popen(_settings_cmd(DEFAULT_CONFIG_PATH, tab))
 
         def _on_exit() -> None:
             rc = settings_proc[0].wait() if settings_proc[0] else 1
@@ -167,6 +172,12 @@ def main() -> None:
                     log.exception("Uncaught error during config reload")
 
         threading.Thread(target=_on_exit, daemon=True).start()
+
+    def open_settings() -> None:
+        _open_settings_window("settings")
+
+    def open_about() -> None:
+        _open_settings_window("about")
 
     _check_accessibility(config, PLUGINS)
     conferencing_sync = ConferencingSync(PLUGINS, backend)
