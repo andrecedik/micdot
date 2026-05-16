@@ -39,9 +39,10 @@ Releases are built automatically via GitHub Actions on `v*` tags. Only arm64 (Ap
 - **`HotkeyListener`** — wraps pynput; one long-lived `Listener` thread with a swappable `HotKey` object
 - **`MQTTClient`** — paho MQTT with `loop_start()` (background thread); skips entirely when `mqtt_host` is empty
 - **`TrayIcon`** — pystray runs on the main thread via `tray.run()` (blocking); all UI updates must respect this
-- **`SettingsWindow`** — launched as a **separate subprocess** (`subprocess.Popen`) to avoid pywebview conflicting with pystray's NSApp on the same main thread
+- **`SettingsWindow`** — launched as a **separate subprocess** (`subprocess.Popen`) to avoid pywebview conflicting with pystray's NSApp on the same main thread; accepts `--tab <name>` to open a specific tab on launch
+- **`ConferencingSync`** — background discovery loop that auto-detects running video-call apps (Zoom, Teams, Meet) and bidirectionally syncs mute state; part of `_State`
 
-`_State` holds the mutable trio (config, mqtt, hotkey_listener) that gets swapped on config reload.
+`_State` holds the mutable quartet (config, mqtt, hotkey_listener, conferencing_sync) that gets swapped on config reload.
 
 ### Config reload flow
 
@@ -58,7 +59,7 @@ When the settings subprocess exits with code 0, `_reload_config` is called from 
 
 ### Audio backend
 
-`micdot/audio/backend.py` defines the `AudioBackend` ABC. `get_backend()` dispatches to `MacOSAudioBackend` (CoreAudio via ctypes) on darwin, and raises on other platforms. `StubAudioBackend` is used in tests.
+`micdot/audio/backend.py` defines the `AudioBackend` ABC. `micdot/audio/macos.py` contains the `MacOSAudioBackend` implementation (CoreAudio via ctypes). `get_backend()` dispatches on platform and raises on non-darwin. `StubAudioBackend` is used in tests.
 
 ### MQTT topics
 
@@ -77,6 +78,20 @@ When running as a PyInstaller bundle, `--settings <path>` is passed as a CLI arg
 ### Config
 
 Stored at `~/.config/micdot/config.json`. `Config` is a dataclass; `Config.load()` merges persisted values over defaults so new fields are always available.
+
+### Conferencing plugins
+
+`micdot/conferencing/` provides bidirectional mute sync with video-call apps. `ConferencingPlugin` (`base.py`) is the ABC. Each plugin implements:
+- `is_compatible()` / `is_running()` / `is_in_meeting()` — detection
+- `start_observing(callback)` / `stop_observing()` — listen for in-app mute changes
+- `set_mute(muted)` — push state to the app
+- `requires_accessibility: bool` — if `True`, AX permission is required; the Teams plugin uses the Local API over WebSocket and does not require it
+
+`PLUGINS = [ZoomPlugin, TeamsPlugin, MeetPlugin]` are tried in order by `ConferencingSync`.
+
+### Version
+
+`micdot/version.py` resolves the app version: via `NSBundle` when frozen, via package metadata (`importlib.metadata`) when running from source.
 
 ### Autostart
 
