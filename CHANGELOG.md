@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- About tab in settings window showing app version, GitHub link, and a "Support me" donate link.
+- "About" tray menu item that opens the About tab directly.
+
 ## [0.4.0] - 2026-05-13
 
 ### Changed
