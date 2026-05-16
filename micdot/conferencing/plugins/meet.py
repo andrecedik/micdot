@@ -4,7 +4,7 @@ from micdot.conferencing.ax_utils import AXPlugin
 
 log = logging.getLogger("micdot")
 
-_MEET_URL_FRAGMENT = "meet.google.com"
+_MEET_TITLE_FRAGMENT = "google meet"
 _MUTE_SEARCH_KEYWORD = "mute"
 
 
@@ -17,8 +17,7 @@ class MeetPlugin(AXPlugin):
         app_el = self._get_app_element()
         if app_el is None:
             return False
-        meet_window = self._find_meet_window(app_el)
-        return meet_window is not None
+        return self._find_meet_window(app_el) is not None
 
     def _find_meet_window(self, app_element):
         """Return the Chrome window showing a Google Meet tab, or None."""
@@ -27,7 +26,7 @@ class MeetPlugin(AXPlugin):
             return None
         for w in windows:
             err_t, title = self._get_attr(w, "AXTitle")
-            if err_t == 0 and _MEET_URL_FRAGMENT in (title or "").lower():
+            if err_t == 0 and _MEET_TITLE_FRAGMENT in (title or "").lower():
                 return w
         return None
 
@@ -35,5 +34,4 @@ class MeetPlugin(AXPlugin):
         meet_window = self._find_meet_window(app_element)
         if meet_window is None:
             return None
-        # Chrome's tree is deep. Limit depth to avoid long traversal times.
         return self._walk(meet_window, "AXButton", _MUTE_SEARCH_KEYWORD, max_depth=20)

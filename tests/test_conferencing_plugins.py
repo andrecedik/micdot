@@ -167,3 +167,37 @@ class TestMeetPlugin:
         mocker.patch.object(plugin, "is_running", return_value=True)
         mocker.patch.object(plugin, "is_in_meeting", return_value=False)
         assert plugin.get_mute() is None
+
+    def test_is_in_meeting_false_when_no_meet_window(self, mocker):
+        from micdot.conferencing.plugins.meet import MeetPlugin
+        plugin = MeetPlugin()
+        fake_app_el = MagicMock()
+        fake_window = MagicMock()
+        mocker.patch.object(plugin, "_get_app_element", return_value=fake_app_el)
+
+        def fake_get_attr(element, attr):
+            if attr == "AXWindows":
+                return (0, [fake_window])
+            if attr == "AXTitle":
+                return (0, "GitHub - Some Repo")
+            return (-1, None)
+
+        mocker.patch.object(plugin, "_get_attr", side_effect=fake_get_attr)
+        assert plugin.is_in_meeting() is False
+
+    def test_is_in_meeting_true_when_window_title_contains_google_meet(self, mocker):
+        from micdot.conferencing.plugins.meet import MeetPlugin
+        plugin = MeetPlugin()
+        fake_app_el = MagicMock()
+        fake_window = MagicMock()
+        mocker.patch.object(plugin, "_get_app_element", return_value=fake_app_el)
+
+        def fake_get_attr(element, attr):
+            if attr == "AXWindows":
+                return (0, [fake_window])
+            if attr == "AXTitle":
+                return (0, "André Cedik - Google Meet")
+            return (-1, None)
+
+        mocker.patch.object(plugin, "_get_attr", side_effect=fake_get_attr)
+        assert plugin.is_in_meeting() is True
