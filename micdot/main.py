@@ -191,6 +191,7 @@ def main() -> None:
     tray = TrayIcon(
         on_toggle=on_toggle,
         on_settings=open_settings,
+        on_about=open_about,
         on_quit=on_quit,
     )
 
