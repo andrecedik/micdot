@@ -153,7 +153,7 @@ class TestTeamsPlugin:
 # ------------------------------------------------------------------ #
 
 class TestMeetPlugin:
-    def test_bundle_ids_include_chrome_and_safari(self):
+    def test_bundle_id_is_chrome(self):
         from micdot.conferencing.plugins.meet import MeetPlugin
         assert MeetPlugin.bundle_id == "com.google.Chrome"
 
