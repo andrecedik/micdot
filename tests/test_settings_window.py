@@ -99,9 +99,9 @@ def test_save_enables_autostart_with_python_command_when_not_frozen(api, mocker)
 def test_build_html_substitutes_all_placeholders(tmp_path):
     config = Config.load(tmp_path / "config.json")
     html = _build_html(config, "settings", "0.5.0")
-    assert "CONFIG_PLACEHOLDER" not in html
-    assert "INITIAL_TAB_PLACEHOLDER" not in html
-    assert "VERSION_PLACEHOLDER" not in html
+    assert "__MICDOT_CONFIG__" not in html
+    assert "__MICDOT_TAB__" not in html
+    assert "__MICDOT_VER__" not in html
 
 
 def test_build_html_sets_initial_tab_settings(tmp_path):

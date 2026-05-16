@@ -111,9 +111,9 @@ nav.tabs{display:flex;gap:2px;background:#e0e0e0;border-radius:8px;padding:2px;m
 </div>
 </section>
 <script>
-var c=CONFIG_PLACEHOLDER;
-var initialTab=INITIAL_TAB_PLACEHOLDER;
-var appVersion=VERSION_PLACEHOLDER;
+var c=__MICDOT_CONFIG__;
+var initialTab=__MICDOT_TAB__;
+var appVersion=__MICDOT_VER__;
 document.getElementById('about-version').textContent='Version '+appVersion;
 var panes=document.querySelectorAll('.pane');
 var tabBtns=document.querySelectorAll('.tab-btn');
@@ -172,9 +172,9 @@ document.getElementById('btn').addEventListener('click',function(){
 
 
 def _build_html(config: Config, initial_tab: str, version: str) -> str:
-    html = _HTML.replace("CONFIG_PLACEHOLDER", json.dumps(asdict(config)))
-    html = html.replace("INITIAL_TAB_PLACEHOLDER", json.dumps(initial_tab))
-    html = html.replace("VERSION_PLACEHOLDER", json.dumps(version))
+    html = _HTML.replace("__MICDOT_CONFIG__", json.dumps(asdict(config)))
+    html = html.replace("__MICDOT_TAB__", json.dumps(initial_tab))
+    html = html.replace("__MICDOT_VER__", json.dumps(version))
     return html
 
 
