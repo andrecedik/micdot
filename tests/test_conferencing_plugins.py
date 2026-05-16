@@ -201,3 +201,15 @@ class TestMeetPlugin:
 
         mocker.patch.object(plugin, "_get_attr", side_effect=fake_get_attr)
         assert plugin.is_in_meeting() is True
+
+    def test_find_mute_element_searches_microphone_keyword(self, mocker):
+        from micdot.conferencing.plugins.meet import MeetPlugin
+        plugin = MeetPlugin()
+        fake_app_el = MagicMock()
+        fake_window = MagicMock()
+        fake_btn = MagicMock()
+        mocker.patch.object(plugin, "_find_meet_window", return_value=fake_window)
+        walk = mocker.patch.object(plugin, "_walk", return_value=fake_btn)
+        result = plugin._find_mute_element(fake_app_el)
+        walk.assert_called_once_with(fake_window, "AXButton", "microphone", max_depth=20)
+        assert result is fake_btn

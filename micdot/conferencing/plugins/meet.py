@@ -5,7 +5,7 @@ from micdot.conferencing.ax_utils import AXPlugin
 log = logging.getLogger("micdot")
 
 _MEET_TITLE_FRAGMENT = "google meet"
-_MUTE_SEARCH_KEYWORD = "mute"
+_MUTE_SEARCH_KEYWORD = "microphone"
 
 
 class MeetPlugin(AXPlugin):
