@@ -59,6 +59,7 @@ nav.tabs{display:flex;gap:2px;background:#e0e0e0;border-radius:8px;padding:2px;m
 .about-app{padding:16px 12px 4px;font-size:15px;font-weight:600;color:#111}
 .about-ver{padding:2px 12px 14px;font-size:12px;color:#888}
 #hotkey{cursor:pointer;font-family:monospace}
+#hotkey.listening{outline:1.5px solid #ff3b30;outline-offset:2px;border-radius:3px;background:rgba(255,59,48,.06)}
 </style>
 </head>
 <body>
@@ -150,11 +151,17 @@ mh.addEventListener('input',function(){if(/^#[0-9a-fA-F]{6}$/.test(mh.value))mp.
 up.addEventListener('input',function(){uh.value=up.value});
 uh.addEventListener('input',function(){if(/^#[0-9a-fA-F]{6}$/.test(uh.value))up.value=uh.value});
 var hotkeyInput=document.getElementById('hotkey');
+var savedHotkey='';
 hotkeyInput.addEventListener('focus',function(){
-  if(hotkeyInput.value)hotkeyInput.placeholder='press new hotkey…';
+  savedHotkey=hotkeyInput.value;
+  hotkeyInput.value='';
+  hotkeyInput.placeholder='press hotkey…';
+  hotkeyInput.classList.add('listening');
 });
 hotkeyInput.addEventListener('blur',function(){
+  if(!hotkeyInput.value)hotkeyInput.value=savedHotkey;
   hotkeyInput.placeholder='click, then press hotkey…';
+  hotkeyInput.classList.remove('listening');
 });
 hotkeyInput.addEventListener('keydown',function(e){
   e.preventDefault();

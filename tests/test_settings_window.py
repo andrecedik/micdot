@@ -229,3 +229,23 @@ def test_build_html_hotkey_input_has_keydown_listener(tmp_path):
     html = _build_html(config, "settings", "0.5.0")
     assert "keydown" in html
     assert "hotkeyInput" in html
+
+
+def test_build_html_hotkey_has_listening_css(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert "#hotkey.listening" in html
+    assert "#ff3b30" in html
+
+
+def test_build_html_hotkey_focus_saves_and_clears_value(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert "savedHotkey" in html
+    assert "classList.add('listening')" in html
+
+
+def test_build_html_hotkey_blur_restores_value(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert "classList.remove('listening')" in html
