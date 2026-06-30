@@ -38,6 +38,7 @@ class ConferencingSync:
     def on_mute_change(self, muted: bool) -> None:
         """Called by Poller's on_change when MicDot's hardware mute state changes."""
         for p in self._plugins:
+            log.debug("ConferencingSync.on_mute_change: %s observing=%s in_meeting=%s", p.name, id(p) in self._observing, p.is_in_meeting())
             if id(p) not in self._observing or not p.is_in_meeting():
                 continue
             with self._lock:

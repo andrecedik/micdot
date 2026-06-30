@@ -46,6 +46,7 @@ class TeamsPlugin(ConferencingPlugin):
         return self._muted if self._in_meeting else None
 
     def set_mute(self, muted: bool) -> None:
+        log.debug("TeamsPlugin.set_mute: muted=%s in_meeting=%s current_muted=%s", muted, self._in_meeting, self._muted)
         if not self._in_meeting or self._muted == muted:
             return
         self._send({"action": "toggle-mute"})
@@ -98,6 +99,7 @@ class TeamsPlugin(ConferencingPlugin):
         log.debug("TeamsPlugin: connected to Teams local API")
 
     def _on_message(self, ws, raw: str) -> None:
+        log.debug("TeamsPlugin: raw message: %s", raw)
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
