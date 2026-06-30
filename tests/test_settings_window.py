@@ -168,3 +168,64 @@ def test_open_url_rejects_non_string(api, mocker):
     mock_open = mocker.patch("micdot.settings_window.webbrowser.open")
     api.open_url(None)
     mock_open.assert_not_called()
+
+
+# --- hotkey validation ---
+
+def test_save_accepts_valid_hotkey_ctrl_shift_m(api, mocker):
+    mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+    api.save({**_DATA, "hotkey": "ctrl+shift+m"})
+    assert api.saved
+
+
+def test_save_accepts_valid_hotkey_cmd_space(api, mocker):
+    mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+    api.save({**_DATA, "hotkey": "cmd+space"})
+    assert api.saved
+
+
+def test_save_accepts_valid_hotkey_ctrl_f1(api, mocker):
+    mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+    api.save({**_DATA, "hotkey": "ctrl+f1"})
+    assert api.saved
+
+
+def test_save_rejects_invalid_hotkey_string(api, mocker):
+    mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+    with pytest.raises(ValueError, match="Invalid hotkey"):
+        api.save({**_DATA, "hotkey": "ctrl+not!!!valid"})
+    assert not api.saved
+
+
+def test_save_rejects_empty_hotkey(api, mocker):
+    mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+    with pytest.raises(ValueError):
+        api.save({**_DATA, "hotkey": ""})
+    assert not api.saved
+
+
+def test_save_rejects_bare_key_without_modifier(api, mocker):
+    mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+    with pytest.raises(ValueError, match="modifier"):
+        api.save({**_DATA, "hotkey": "m"})
+    assert not api.saved
+
+
+def test_build_html_hotkey_input_is_readonly(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert 'id="hotkey"' in html
+    assert "readonly" in html
+
+
+def test_build_html_hotkey_input_has_keydown_listener(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert "keydown" in html
+    assert "hotkeyInput" in html

@@ -10,8 +10,10 @@ from pathlib import Path
 
 from micdot.autostart import enable_autostart, disable_autostart
 from micdot.config import Config, DEFAULT_CONFIG_PATH
+from micdot.hotkey import to_pynput_format
 from micdot.log import setup as setup_logging
 from micdot.version import get_version
+from pynput import keyboard as _pynput_keyboard
 
 log = setup_logging()
 
@@ -56,6 +58,7 @@ nav.tabs{display:flex;gap:2px;background:#e0e0e0;border-radius:8px;padding:2px;m
 .link-row:last-child{border-bottom:none}
 .about-app{padding:16px 12px 4px;font-size:15px;font-weight:600;color:#111}
 .about-ver{padding:2px 12px 14px;font-size:12px;color:#888}
+#hotkey{cursor:pointer;font-family:monospace}
 </style>
 </head>
 <body>
@@ -79,7 +82,7 @@ nav.tabs{display:flex;gap:2px;background:#e0e0e0;border-radius:8px;padding:2px;m
 <div class="lbl">HARDWARE &amp; BEHAVIOUR</div>
 <div class="group">
   <div class="row"><label>Hotkey</label>
-    <input type="text" id="hotkey"></div>
+    <input type="text" id="hotkey" readonly placeholder="click, then press hotkey…"></div>
   <div class="row"><label>Brightness</label>
     <input type="number" id="led_brightness" min="0" max="255" style="width:70px;flex:none"></div>
   <div class="row"><label>Muted color</label>
@@ -146,6 +149,34 @@ mp.addEventListener('input',function(){mh.value=mp.value});
 mh.addEventListener('input',function(){if(/^#[0-9a-fA-F]{6}$/.test(mh.value))mp.value=mh.value});
 up.addEventListener('input',function(){uh.value=up.value});
 uh.addEventListener('input',function(){if(/^#[0-9a-fA-F]{6}$/.test(uh.value))up.value=uh.value});
+var hotkeyInput=document.getElementById('hotkey');
+hotkeyInput.addEventListener('focus',function(){
+  if(hotkeyInput.value)hotkeyInput.placeholder='press new hotkey…';
+});
+hotkeyInput.addEventListener('blur',function(){
+  hotkeyInput.placeholder='click, then press hotkey…';
+});
+hotkeyInput.addEventListener('keydown',function(e){
+  e.preventDefault();
+  var k=e.key;
+  if(k==='Control'||k==='Shift'||k==='Alt'||k==='Meta')return;
+  var parts=[];
+  if(e.ctrlKey)parts.push('ctrl');
+  if(e.shiftKey)parts.push('shift');
+  if(e.altKey)parts.push('alt');
+  if(e.metaKey)parts.push('cmd');
+  if(!parts.length)return;
+  var name;
+  if(k===' ')name='space';
+  else if(k==='Enter')name='enter';
+  else if(k==='Tab')name='tab';
+  else if(k==='Backspace')name='backspace';
+  else if(/^F\\d{1,2}$/.test(k))name=k.toLowerCase();
+  else if(k.length===1)name=k.toLowerCase();
+  else return;
+  parts.push(name);
+  hotkeyInput.value=parts.join('+');
+});
 document.getElementById('btn').addEventListener('click',function(){
   var portVal=parseInt(document.getElementById('mqtt_port').value);
   var brightVal=parseInt(document.getElementById('led_brightness').value);
@@ -193,12 +224,20 @@ class Api:
 
     def save(self, data: dict) -> None:
         log.info("Saving settings")
+        hotkey_str = str(data["hotkey"])
+        _parts = hotkey_str.split("+")
+        if len(_parts) < 2 or not any(p.lower() in {"ctrl", "shift", "alt", "cmd"} for p in _parts[:-1]):
+            raise ValueError(f"Hotkey must include at least one modifier: {hotkey_str!r}")
+        try:
+            _pynput_keyboard.HotKey.parse(to_pynput_format(hotkey_str))
+        except Exception as exc:
+            raise ValueError(f"Invalid hotkey: {hotkey_str!r}") from exc
         new = Config(
             mqtt_host=str(data["mqtt_host"]),
             mqtt_port=int(data["mqtt_port"]),
             mqtt_username=str(data["mqtt_username"]),
             mqtt_password=str(data["mqtt_password"]),
-            hotkey=str(data["hotkey"]),
+            hotkey=hotkey_str,
             led_brightness=int(data["led_brightness"]),
             color_muted={
                 "r": int(data["color_muted"]["r"]),
