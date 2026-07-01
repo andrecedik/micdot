@@ -7,7 +7,7 @@ _MODIFIERS = {"ctrl", "shift", "alt", "cmd"}
 
 def to_pynput_format(hotkey: str) -> str:
     return "+".join(
-        f"<{p.lower()}>" if p.lower() in _MODIFIERS else p.lower()
+        f"<{p.lower()}>" if len(p) != 1 else p.lower()
         for p in hotkey.split("+")
     )
 

@@ -27,10 +27,12 @@ class TrayIcon:
         self,
         on_toggle: Callable[[], None],
         on_settings: Callable[[], None],
+        on_about: Callable[[], None],
         on_quit: Callable[[], None],
     ):
         self._on_toggle = on_toggle
         self._on_settings = on_settings
+        self._on_about = on_about
         self._on_quit = on_quit
         self._icon = pystray.Icon(
             "micdot",
@@ -38,6 +40,8 @@ class TrayIcon:
             menu=pystray.Menu(
                 pystray.MenuItem("Toggle Mute", self._toggle, default=True),
                 pystray.MenuItem("Settings", self._settings),
+                pystray.MenuItem("About", self._about),
+                pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Quit", self._quit),
             ),
         )
@@ -62,6 +66,9 @@ class TrayIcon:
 
     def _settings(self, icon, item) -> None:
         self._on_settings()
+
+    def _about(self, icon, item) -> None:
+        self._on_about()
 
     def _quit(self, icon, item) -> None:
         self.stop()

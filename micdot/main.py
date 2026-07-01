@@ -5,35 +5,39 @@ import threading
 from pathlib import Path
 from typing import Callable
 
-from micdot.audio.backend import get_backend
+from micdot.audio.backend import get_backend, AudioBackend
 from micdot.config import Config, DEFAULT_CONFIG_PATH
 from micdot.hotkey import HotkeyListener
 from micdot.log import setup as setup_logging
 from micdot.mqtt_client import MQTTClient
 from micdot.poller import Poller
 from micdot.tray import TrayIcon
+from micdot.conferencing import ConferencingSync, PLUGINS
 
 log = setup_logging()
 
 
 class _State:
-    __slots__ = ("config", "mqtt", "hotkey_listener")
+    __slots__ = ("config", "mqtt", "hotkey_listener", "conferencing_sync")
 
     def __init__(
         self,
         config: Config,
         mqtt: MQTTClient,
         hotkey_listener: HotkeyListener,
+        conferencing_sync: ConferencingSync,
     ) -> None:
         self.config = config
         self.mqtt = mqtt
         self.hotkey_listener = hotkey_listener
+        self.conferencing_sync = conferencing_sync
 
 
 def _reload_config(
     state: _State,
     config_path: Path,
     on_toggle: Callable[[], None],
+    backend: AudioBackend,
 ) -> None:
     log.info("Reloading config from %s", config_path)
     new_config = Config.load(config_path)
@@ -45,6 +49,11 @@ def _reload_config(
     state.mqtt.stop()
     state.mqtt = new_mqtt
     state.mqtt.start()
+    state.conferencing_sync.stop()
+    new_sync = ConferencingSync(PLUGINS, backend)
+    if new_config.conferencing_sync_enabled:
+        new_sync.start()
+    state.conferencing_sync = new_sync
 
     # HotKey construction calls TISCopyCurrentKeyboardInputSource which asserts
     # dispatch_assert_queue(main_queue) on macOS 15+. Dispatch to main thread.
@@ -70,18 +79,57 @@ def _reload_config(
             _update_hotkey()
 
 
-def _settings_cmd(config_path: Path) -> list[str]:
+def _ax_is_trusted() -> bool:
+    try:
+        from ApplicationServices import AXIsProcessTrusted
+        return bool(AXIsProcessTrusted())
+    except Exception:
+        return False
+
+
+def _needs_accessibility(plugins) -> bool:
+    return any(getattr(p, "requires_accessibility", False) for p in plugins)
+
+
+def _check_accessibility(config: Config, plugins) -> None:
+    if not config.conferencing_sync_enabled:
+        return
+    if not _needs_accessibility(plugins):
+        return
+    if _ax_is_trusted():
+        return
+    log.warning(
+        "Accessibility permission not granted — Zoom/Meet sync disabled. "
+        "Grant it in System Settings → Privacy & Security → Accessibility, then restart MicDot."
+    )
+    try:
+        subprocess.run(
+            ["osascript", "-e",
+             'display notification "Grant Accessibility access in System Settings to enable '
+             'Zoom and Meet sync, then restart MicDot." with title "MicDot"'],
+            check=False,
+        )
+    except Exception:
+        pass
+
+
+def _settings_cmd(config_path: Path, tab: str = "settings") -> list[str]:
     if getattr(sys, "frozen", False):
-        return [sys.executable, "--settings", str(config_path)]
-    return [sys.executable, "-m", "micdot.settings_window", str(config_path)]
+        return [sys.executable, "--settings", str(config_path), "--tab", tab]
+    return [sys.executable, "-m", "micdot.settings_window", str(config_path), "--tab", tab]
 
 
 def main() -> None:
     if getattr(sys, "frozen", False) and "--settings" in sys.argv:
         idx = sys.argv.index("--settings")
         path = Path(sys.argv[idx + 1]) if idx + 1 < len(sys.argv) else DEFAULT_CONFIG_PATH
+        tab = "settings"
+        if "--tab" in sys.argv:
+            tidx = sys.argv.index("--tab")
+            if tidx + 1 < len(sys.argv):
+                tab = sys.argv[tidx + 1]
         from micdot.settings_window import run as run_settings
-        run_settings(path)
+        run_settings(path, initial_tab=tab)
         return
 
     log.info("MicDot starting")
@@ -97,47 +145,62 @@ def main() -> None:
         log.debug("Mic state changed: muted=%s", muted)
         state.mqtt.publish_state(muted)
         tray.set_muted(muted)
+        state.conferencing_sync.on_mute_change(muted)
 
     def on_quit() -> None:
         log.info("Quit requested")
         state.hotkey_listener.stop()
         poller.stop()
         state.mqtt.stop()
+        state.conferencing_sync.stop()
         sys.exit(0)
 
     settings_proc: list[subprocess.Popen | None] = [None]
 
-    def open_settings() -> None:
+    def _open_settings_window(tab: str) -> None:
         if settings_proc[0] is not None and settings_proc[0].poll() is None:
             return
-        log.info("Opening settings window")
-        settings_proc[0] = subprocess.Popen(_settings_cmd(DEFAULT_CONFIG_PATH))
+        log.info("Opening settings window (tab=%s)", tab)
+        settings_proc[0] = subprocess.Popen(_settings_cmd(DEFAULT_CONFIG_PATH, tab))
 
         def _on_exit() -> None:
             rc = settings_proc[0].wait() if settings_proc[0] else 1
             if rc == 0:
                 try:
-                    _reload_config(state, DEFAULT_CONFIG_PATH, on_toggle)
+                    _reload_config(state, DEFAULT_CONFIG_PATH, on_toggle, backend)
                 except Exception:
                     log.exception("Uncaught error during config reload")
 
         threading.Thread(target=_on_exit, daemon=True).start()
 
+    def open_settings() -> None:
+        _open_settings_window("settings")
+
+    def open_about() -> None:
+        _open_settings_window("about")
+
+    _check_accessibility(config, PLUGINS)
+    conferencing_sync = ConferencingSync(PLUGINS, backend)
     state = _State(
         config,
         MQTTClient(config, on_button_press=on_toggle),
         HotkeyListener(config.hotkey, callback=on_toggle),
+        conferencing_sync,
     )
     poller = Poller(backend, on_change=on_state_change)
     tray = TrayIcon(
         on_toggle=on_toggle,
         on_settings=open_settings,
+        on_about=open_about,
         on_quit=on_quit,
     )
 
     state.mqtt.start()
     poller.start()
     state.hotkey_listener.start()
+    if config.conferencing_sync_enabled:
+        conferencing_sync.start()
+        log.info("Conferencing sync started")
     log.info("MicDot running")
     tray.run()
 

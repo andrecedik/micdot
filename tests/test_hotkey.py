@@ -9,12 +9,12 @@ def test_single_modifier():
     assert to_pynput_format("ctrl+m") == "<ctrl>+m"
 
 
-def test_multiple_modifiers():
-    assert to_pynput_format("alt+shift+f4") == "<alt>+<shift>+f4"
+def test_multiple_modifiers_with_named_key():
+    assert to_pynput_format("alt+shift+f4") == "<alt>+<shift>+<f4>"
 
 
-def test_plain_key_unchanged():
-    assert to_pynput_format("f12") == "f12"
+def test_named_key_wrapped_in_angle_brackets():
+    assert to_pynput_format("f12") == "<f12>"
 
 
 def test_listener_start_creates_hotkey_and_listener(mocker):
