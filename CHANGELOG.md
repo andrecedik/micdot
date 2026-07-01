@@ -16,11 +16,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - About tab in settings window showing app version, GitHub link, and a "Support me" donate link.
 - "About" tray menu item that opens the About tab directly.
 - Version resolver reads from `NSBundle` when running as a frozen app; falls back to `importlib.metadata` from source.
+- Hotkey field in settings shows a visual listening indicator while capturing a new key combination.
 
 ### Fixed
 
 - Sentinel values in `_build_html` are now collision-safe, preventing config values that contain the old sentinel string from corrupting the rendered settings HTML.
 - `AXIsProcessTrusted` is re-checked on config reload so Accessibility permission changes take effect without restarting.
+- Hotkey field now captures `keydown` events in the settings UI and validates the hotkey before saving.
+- Google Meet plugin detects active meetings by page title instead of URL fragment.
+- Google Meet plugin searches for the `microphone` keyword to locate the mute button, and reads mute state from button labels correctly.
 
 ## [0.4.0] - 2026-05-13
 
@@ -115,7 +119,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Dynamic version injection in PyInstaller spec.
 - Strip `v`-prefix from zip artifact names.
 
-[Unreleased]: https://github.com/andrecedik/micdot/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/andrecedik/micdot/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/andrecedik/micdot/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/andrecedik/micdot/compare/v0.3.8...v0.4.0
 [0.3.8]: https://github.com/andrecedik/micdot/compare/v0.3.7...v0.3.8
 [0.3.7]: https://github.com/andrecedik/micdot/compare/v0.3.6...v0.3.7
