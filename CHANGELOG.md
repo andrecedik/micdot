@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-01
+
 ### Added
 
 - **Conferencing sync** — bidirectional mute sync with running video-call apps. When you mute in Zoom, Teams, or Google Meet, MicDot follows; when you mute via MicDot, the app follows. Auto-detected; no configuration needed.
