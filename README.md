@@ -8,6 +8,7 @@ A macOS menu bar app that mutes and unmutes your microphone — via hotkey, tray
 
 - One-click or hotkey (default `ctrl+shift+m`) mute toggle
 - Menu bar icon reflects current mute state
+- **Conferencing sync** — bidirectional mute sync with Zoom, Microsoft Teams, and Google Meet; auto-detected, no configuration needed
 - Optional ESP32 hardware: physical button + RGB LED ring over MQTT
 - Settings window with live config reload (no restart needed)
 - Launches at login via macOS LaunchAgent
@@ -55,7 +56,8 @@ MicDot looks for its config at `~/.config/micdot/config.json`. On first run it c
   "color_unmuted": { "r": 255, "g": 0,   "b": 0 },
   "led_brightness": 128,
   "hotkey": "ctrl+shift+m",
-  "autostart": false
+  "autostart": false,
+  "conferencing_sync_enabled": true
 }
 ```
 
@@ -130,6 +132,7 @@ All tests run without hardware or an MQTT broker.
 ```
 micdot/
   audio/              CoreAudio backend (mute/unmute via macOS APIs)
+  conferencing/       Bidirectional mute sync plugins (Zoom, Teams, Meet)
   config.py           JSON config loader/saver
   hotkey.py           Global hotkey listener (pynput)
   mqtt_client.py      MQTT publish/subscribe (paho)
