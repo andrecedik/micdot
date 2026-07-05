@@ -70,10 +70,16 @@ class MacOSAudioBackend(AudioBackend):
         )
         mute = ctypes.c_uint32(0)
         size = ctypes.c_uint32(ctypes.sizeof(mute))
-        _ca.AudioObjectGetPropertyData(
+        status = _ca.AudioObjectGetPropertyData(
             device_id, ctypes.byref(prop),
             0, None, ctypes.byref(size), ctypes.byref(mute),
         )
+        if status != 0:
+            # e.g. kAudioHardwareUnknownPropertyError ('who?') — the device
+            # has no HAL mute control (common on USB/Bluetooth mics).
+            raise OSError(
+                f"CoreAudio: reading mute on device {device_id} returned {status}"
+            )
         return bool(mute.value)
 
     def set_mute(self, muted: bool) -> None:
@@ -85,7 +91,11 @@ class MacOSAudioBackend(AudioBackend):
         )
         mute = ctypes.c_uint32(int(muted))
         size = ctypes.c_uint32(ctypes.sizeof(mute))
-        _ca.AudioObjectSetPropertyData(
+        status = _ca.AudioObjectSetPropertyData(
             device_id, ctypes.byref(prop),
             0, None, size, ctypes.byref(mute),
         )
+        if status != 0:
+            raise OSError(
+                f"CoreAudio: setting mute on device {device_id} returned {status}"
+            )

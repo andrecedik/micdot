@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Global hotkey now reliably matches combinations that include Shift (e.g. `shift+cmd+m`). Keys are passed through pynput's `canonical()` before matching; previously the shifted character (`M` instead of `m`) never matched the parsed hotkey.
+- Saving settings no longer silently resets `conferencing_sync_enabled` to its default — the value on disk is preserved.
+- Quitting from the tray works with autostart enabled: the LaunchAgent uses `KeepAlive: {SuccessfulExit: false}` (restart after crashes only) instead of relaunching unconditionally.
+- CoreAudio read/write status codes are checked; devices without a HAL mute control (common USB/Bluetooth mics) now log a warning instead of silently pretending to mute. The poller and hotkey toggle survive such errors instead of killing their threads.
+- Settings window shows validation and save errors inline (e.g. invalid hotkey) instead of silently re-enabling the Save button.
+
 ## [0.5.0] - 2026-07-01
 
 ### Added

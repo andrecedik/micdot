@@ -1,7 +1,10 @@
 from __future__ import annotations
+import logging
 import threading
 from typing import Callable, Optional
 from micdot.audio.backend import AudioBackend
+
+log = logging.getLogger("micdot")
 
 
 class Poller:
@@ -11,12 +14,22 @@ class Poller:
         self._last_state: Optional[bool] = None
         self._lock = threading.Lock()
         self._stop = threading.Event()
+        self._error_logged = False
 
     def tick(self) -> None:
         changed = False
         value: Optional[bool] = None
         with self._lock:
-            current = self._backend.get_mute()
+            try:
+                current = self._backend.get_mute()
+            except OSError as exc:
+                # The device may lack a HAL mute control or have just been
+                # unplugged. Log once per episode — tick runs every 200 ms.
+                if not self._error_logged:
+                    log.warning("Could not read mic mute state: %s", exc)
+                    self._error_logged = True
+                return
+            self._error_logged = False
             if current != self._last_state:
                 self._last_state = current
                 changed = True
@@ -26,7 +39,12 @@ class Poller:
 
     def toggle(self) -> None:
         with self._lock:
-            self._backend.set_mute(not self._backend.get_mute())
+            try:
+                self._backend.set_mute(not self._backend.get_mute())
+            except OSError as exc:
+                # Runs inside pynput/MQTT/tray callbacks — an uncaught error
+                # here would kill the hotkey listener thread.
+                log.warning("Could not toggle mic mute: %s", exc)
 
     def start(self, interval: float = 0.2) -> threading.Thread:
         self._stop.clear()

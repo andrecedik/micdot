@@ -11,7 +11,9 @@ def enable_autostart(command: str) -> None:
         "Label": "com.micdot.agent",
         "ProgramArguments": command.split(),
         "RunAtLoad": True,
-        "KeepAlive": True,
+        # Restart after crashes only; a bare True would relaunch immediately
+        # after the user quits from the tray, making Quit impossible.
+        "KeepAlive": {"SuccessfulExit": False},
     }
     PLIST_PATH.parent.mkdir(parents=True, exist_ok=True)
     PLIST_PATH.write_bytes(plistlib.dumps(plist))

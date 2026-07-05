@@ -59,6 +59,8 @@ nav.tabs{display:flex;gap:2px;background:#e0e0e0;border-radius:8px;padding:2px;m
 .about-app{padding:16px 12px 4px;font-size:15px;font-weight:600;color:#111}
 .about-ver{padding:2px 12px 14px;font-size:12px;color:#888}
 #hotkey{cursor:pointer;font-family:monospace}
+#save-error{display:none;color:#ff3b30;font-size:12px;margin-bottom:8px;
+  white-space:pre-wrap}
 #hotkey.listening{outline:1.5px solid #ff3b30;outline-offset:2px;border-radius:3px;background:rgba(255,59,48,.06)}
 </style>
 </head>
@@ -101,6 +103,7 @@ nav.tabs{display:flex;gap:2px;background:#e0e0e0;border-radius:8px;padding:2px;m
   <span>Autostart on login</span>
   <input type="checkbox" id="autostart">
 </div>
+<div id="save-error"></div>
 <button id="btn">Save</button>
 </section>
 <section class="pane" id="pane-about">
@@ -184,11 +187,18 @@ hotkeyInput.addEventListener('keydown',function(e){
   parts.push(name);
   hotkeyInput.value=parts.join('+');
 });
+var saveError=document.getElementById('save-error');
+function showSaveError(msg){
+  saveError.textContent=msg;
+  saveError.style.display='block';
+}
 document.getElementById('btn').addEventListener('click',function(){
+  saveError.textContent='';
+  saveError.style.display='none';
   var portVal=parseInt(document.getElementById('mqtt_port').value);
   var brightVal=parseInt(document.getElementById('led_brightness').value);
-  if(isNaN(portVal)||portVal<1||portVal>65535){alert('Port must be 1–65535');return;}
-  if(isNaN(brightVal)||brightVal<0||brightVal>255){alert('Brightness must be 0–255');return;}
+  if(isNaN(portVal)||portVal<1||portVal>65535){showSaveError('Port must be 1–65535');return;}
+  if(isNaN(brightVal)||brightVal<0||brightVal>255){showSaveError('Brightness must be 0–255');return;}
   var mhv=/^#[0-9a-fA-F]{6}$/.test(mh.value)?mh.value:toHex(c.color_muted);
   var uhv=/^#[0-9a-fA-F]{6}$/.test(uh.value)?uh.value:toHex(c.color_unmuted);
   document.getElementById('btn').disabled=true;
@@ -202,7 +212,10 @@ document.getElementById('btn').addEventListener('click',function(){
     color_muted:hexToRgb(mhv),
     color_unmuted:hexToRgb(uhv),
     autostart:document.getElementById('autostart').checked
-  }).catch(function(){document.getElementById('btn').disabled=false;});
+  }).catch(function(err){
+    showSaveError(err&&err.message?err.message:'Saving failed');
+    document.getElementById('btn').disabled=false;
+  });
 });
 </script>
 </body>
@@ -239,7 +252,11 @@ class Api:
             _pynput_keyboard.HotKey.parse(to_pynput_format(hotkey_str))
         except Exception as exc:
             raise ValueError(f"Invalid hotkey: {hotkey_str!r}") from exc
+        # Carry over fields the settings UI has no control for, so saving
+        # doesn't silently reset them to defaults.
+        existing = Config.load(self._config_path)
         new = Config(
+            conferencing_sync_enabled=existing.conferencing_sync_enabled,
             mqtt_host=str(data["mqtt_host"]),
             mqtt_port=int(data["mqtt_port"]),
             mqtt_username=str(data["mqtt_username"]),

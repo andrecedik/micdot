@@ -53,6 +53,45 @@ def test_listener_stop_before_start_is_noop(mocker):
     listener.stop()  # must not raise
 
 
+def test_on_press_canonicalizes_key_before_matching(mocker):
+    mock_hotkey_cls = mocker.patch("micdot.hotkey.keyboard.HotKey")
+    mocker.patch("micdot.hotkey.keyboard.HotKey.parse")
+    mock_listener_cls = mocker.patch("micdot.hotkey.keyboard.Listener")
+
+    listener = HotkeyListener("shift+cmd+m", mocker.Mock())
+    listener.start()
+    raw_key = mocker.Mock(name="raw_key")
+    listener._on_press(raw_key)
+
+    canonical = mock_listener_cls.return_value.canonical
+    canonical.assert_called_once_with(raw_key)
+    mock_hotkey_cls.return_value.press.assert_called_once_with(canonical.return_value)
+
+
+def test_on_release_canonicalizes_key_before_matching(mocker):
+    mock_hotkey_cls = mocker.patch("micdot.hotkey.keyboard.HotKey")
+    mocker.patch("micdot.hotkey.keyboard.HotKey.parse")
+    mock_listener_cls = mocker.patch("micdot.hotkey.keyboard.Listener")
+
+    listener = HotkeyListener("shift+cmd+m", mocker.Mock())
+    listener.start()
+    raw_key = mocker.Mock(name="raw_key")
+    listener._on_release(raw_key)
+
+    canonical = mock_listener_cls.return_value.canonical
+    canonical.assert_called_once_with(raw_key)
+    mock_hotkey_cls.return_value.release.assert_called_once_with(canonical.return_value)
+
+
+def test_on_press_before_start_is_noop(mocker):
+    mocker.patch("micdot.hotkey.keyboard.HotKey")
+    mocker.patch("micdot.hotkey.keyboard.HotKey.parse")
+    mocker.patch("micdot.hotkey.keyboard.Listener")
+    listener = HotkeyListener("ctrl+m", mocker.Mock())
+    listener._on_press(mocker.Mock())  # must not raise
+    listener._on_release(mocker.Mock())  # must not raise
+
+
 def test_listener_update_replaces_hotkey(mocker):
     mock_hotkey_cls = mocker.patch("micdot.hotkey.keyboard.HotKey")
     mock_parse = mocker.patch("micdot.hotkey.keyboard.HotKey.parse")

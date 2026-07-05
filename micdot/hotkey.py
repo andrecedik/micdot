@@ -33,12 +33,15 @@ class HotkeyListener:
         self._listener: keyboard.Listener | None = None
 
     def _on_press(self, key) -> None:
-        if self._hotkey is not None:
-            self._hotkey.press(key)
+        # canonical() strips modifier effects from the key (shift+m arrives as
+        # 'M' on macOS) and folds cmd_l/cmd_r into cmd — without it, HotKey
+        # never matches combos that include shift.
+        if self._hotkey is not None and self._listener is not None:
+            self._hotkey.press(self._listener.canonical(key))
 
     def _on_release(self, key) -> None:
-        if self._hotkey is not None:
-            self._hotkey.release(key)
+        if self._hotkey is not None and self._listener is not None:
+            self._hotkey.release(self._listener.canonical(key))
 
     def start(self) -> None:
         self._hotkey = keyboard.HotKey(

@@ -28,10 +28,13 @@ def test_plist_run_at_load(plist_path):
     assert data["RunAtLoad"] is True
 
 
-def test_plist_keep_alive(plist_path):
+def test_plist_keep_alive_allows_clean_quit(plist_path):
+    # KeepAlive must not be a bare True: launchd would relaunch MicDot
+    # immediately after the user quits from the tray. SuccessfulExit=False
+    # restarts only after a crash (non-zero exit).
     enable_autostart("/usr/bin/python3 /path/to/main.py")
     data = plistlib.loads(plist_path.read_bytes())
-    assert data["KeepAlive"] is True
+    assert data["KeepAlive"] == {"SuccessfulExit": False}
 
 
 def test_plist_program_arguments(plist_path):

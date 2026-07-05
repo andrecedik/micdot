@@ -170,6 +170,24 @@ def test_open_url_rejects_non_string(api, mocker):
     mock_open.assert_not_called()
 
 
+def test_save_preserves_disabled_conferencing_sync(api, tmp_path, mocker):
+    mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+    Config(conferencing_sync_enabled=False).save(tmp_path / "config.json")
+    api.save(_DATA)
+    loaded = Config.load(tmp_path / "config.json")
+    assert loaded.conferencing_sync_enabled is False
+
+
+def test_save_preserves_enabled_conferencing_sync(api, tmp_path, mocker):
+    mocker.patch("micdot.settings_window.enable_autostart")
+    mocker.patch("micdot.settings_window.disable_autostart")
+    Config(conferencing_sync_enabled=True).save(tmp_path / "config.json")
+    api.save(_DATA)
+    loaded = Config.load(tmp_path / "config.json")
+    assert loaded.conferencing_sync_enabled is True
+
+
 # --- hotkey validation ---
 
 def test_save_accepts_valid_hotkey_ctrl_shift_m(api, mocker):
@@ -249,3 +267,26 @@ def test_build_html_hotkey_blur_restores_value(tmp_path):
     config = Config.load(tmp_path / "config.json")
     html = _build_html(config, "settings", "0.5.0")
     assert "classList.remove('listening')" in html
+
+
+# --- save error surfacing ---
+
+def test_build_html_has_save_error_element(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert 'id="save-error"' in html
+
+
+def test_build_html_catch_shows_rejection_message(tmp_path):
+    # pywebview rejects the save() promise with an Error whose message is the
+    # Python exception text — the catch handler must display it, not swallow it.
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert "err.message" in html
+    assert "saveError" in html
+
+
+def test_build_html_save_clears_previous_error(tmp_path):
+    config = Config.load(tmp_path / "config.json")
+    html = _build_html(config, "settings", "0.5.0")
+    assert "saveError.textContent=''" in html
